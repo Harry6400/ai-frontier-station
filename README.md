@@ -2,6 +2,8 @@
 
 AI Frontier Station（AI前沿情报站）是一个面向 AI 开发者的前沿信息聚合与精选平台。项目当前形态是一个完整的 Vue + Spring Boot + MySQL 前后端分离 Web 系统，后续目标是持续扩展为支持 GitHub、论文、官方动态、技术社区与大模型 API 总结的信息发现平台。
 
+GitHub: https://github.com/Harry6400/ai-frontier-station
+
 这个项目最初来自课程大作业，但设计时刻意避免“普通管理系统”套路：它围绕 AI 内容源、外部引用、标签体系、AI 导读、GitHub API 和百炼 API 能力开关来构建，适合作为 AI Builder / AI information platform 的开源原型。
 
 ## Highlights
