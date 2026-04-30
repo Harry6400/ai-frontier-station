@@ -16,6 +16,30 @@ GitHub: https://github.com/Harry6400/ai-frontier-station
 - 安全展示：Markdown 渲染通过 DOMPurify 清洗，外部内容不直接信任。
 - 可答辩文档：`docs-learning` 保存阶段记录、技术解释、答辩问答和后续路线。
 
+## Screenshots
+
+以下截图来自本地真实运行项目，用于 GitHub 开源展示、课程答辩和 MiMo Orbit 申请材料。
+
+### Portal Home
+
+![Portal home](docs-learning/assets/mimo/portal-home.png)
+
+### Content Discovery
+
+![Content discovery](docs-learning/assets/mimo/portal-discovery.png)
+
+### Content Detail With AI Guide
+
+![Content detail with AI guide](docs-learning/assets/mimo/portal-detail-ai-guide.png)
+
+### Admin Dashboard
+
+![Admin dashboard](docs-learning/assets/mimo/admin-dashboard.png)
+
+### API Settings
+
+![Admin API settings](docs-learning/assets/mimo/admin-api-settings.png)
+
 ## Architecture
 
 ```text
@@ -126,6 +150,18 @@ For the first open-source version, keys are stored only in backend runtime memor
 - Lost after backend restart.
 
 This is intentional for a coursework and open-source prototype. A production version should add admin authentication and encrypted credential storage.
+
+## For MiMo Orbit
+
+AI Frontier Station 适合作为 MiMo Orbit 百万亿 Token 计划的申请项目，因为它已经具备“数据源管理 + AI 总结层 + 内容发布平台”的完整雏形，而不是只停留在 prompt demo。
+
+- 当前已经接入百炼 / DashScope，并预留多模型 Provider 扩展位置，后续可以把 MiMo 作为新的 AI Provider 接入。
+- 项目需要大量 Token 的真实场景：GitHub README 总结、论文摘要整理、官方动态提炼、技术社区实践归纳、AI 周报生成。
+- 后端已经有运行时 API 设置页，便于演示不同模型能力开关，也能说明开源项目中的密钥安全边界。
+- 数据模型已经支持来源、外部引用、扩展 JSON、标签和重要性评分，适合承载多来源 AI 信息聚合。
+- 项目文档完整，能证明这是一个持续维护的 AI Builder 项目，而不是一次性课程页面。
+
+MiMo 申请材料见：`docs-learning/26-MiMo申请材料.md`。
 
 ## Why This Project Fits AI Builder Programs
 
