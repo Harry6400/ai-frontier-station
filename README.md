@@ -187,9 +187,12 @@ The `docs-learning` folder is part of the project. It contains Chinese notes for
 
 Start with:
 
+- `AGENTS.md`
 - `docs-learning/00-项目总控与长期进度.md`
 - `docs-learning/25-阶段22-后台API设置与GitHubAPI接入记录.md`
 - `docs-learning/26-MiMo申请材料.md`
+
+If you use OpenCode, Codex, or another coding agent, ask it to read `AGENTS.md` first. That file is the shared maintenance entrypoint for this repository.
 
 ## Security Notes
 
