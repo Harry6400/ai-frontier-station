@@ -27,7 +27,7 @@ AI前沿情报站/
 2. `docs-learning/00-项目总控与长期进度.md`
 3. `docs-learning/02-技术选型与目录结构说明.md`
 4. `docs-learning/26-MiMo申请材料.md`
-5. `docs-learning/28-阶段24-MiMo申请增强包记录.md`
+5. `docs-learning/33-阶段29-HuggingFace数据源与登录页重设计记录.md`
 
 如果要继续某个具体阶段，再读对应 `docs-learning/xx-阶段...md`。
 
@@ -37,7 +37,7 @@ AI前沿情报站/
 - 后台管理：Vue 3 / Vite / Vue Router / Pinia / Element Plus
 - 后端服务：Spring Boot 3 / MyBatis-Plus / Lombok / Java 17
 - 数据库：MySQL 8
-- 外部能力：阿里百炼 DashScope / GitHub REST API
+- 外部能力：阿里百炼 DashScope / MiMo / GitHub REST API / arXiv / HuggingFace Papers
 
 ## 启动命令
 
@@ -102,9 +102,12 @@ mysql -uroot -p ai_frontier_station < database/init-data.sql
 - `DB_USERNAME`：数据库用户名
 - `DB_PASSWORD`：数据库密码
 - `DASHSCOPE_API_KEY`：阿里百炼 API Key
+- `MIMO_API_KEY`：MiMo API Key
 - `GITHUB_TOKEN`：GitHub Token
+- `JWT_SECRET`：后台登录 JWT 签名密钥
+- `API_MASTER_KEY`：API Key 加密存储主密钥
 
-后台“API 设置”页也能临时输入百炼 Key 和 GitHub Token。第一版只保存在后端运行内存中，不落库、不回显完整密钥，后端重启后失效。
+后台“API 设置”页支持配置百炼、MiMo 和 GitHub Token。当前版本会优先使用数据库中的 AES-256-GCM 加密记录；未配置时再回退读取环境变量。接口只返回启用状态和掩码，不回显完整密钥。
 
 严禁提交 `.env`、真实 API Key、GitHub Token 或任何本机隐私配置。
 
@@ -120,9 +123,9 @@ mysql -uroot -p ai_frontier_station < database/init-data.sql
 
 ## 安全和边界
 
-- 当前后台无登录鉴权，适合课程演示；生产化前必须补管理员登录和权限控制。
+- 当前后台已有管理员 JWT 登录，默认演示账号为 `admin / admin123`。该账号只适合本地演示，生产化前必须修改默认账号、强密钥和权限策略。
 - Markdown 渲染必须经过 DOMPurify 清洗，不要绕过 `safeMarkdown` 工具直接 `v-html` 外部内容。
-- API Key 当前只允许环境变量或后端运行内存读取，不要擅自改成明文落库。
+- API Key 只能通过环境变量或后台 API 设置页配置。数据库存储必须加密，严禁明文落库、日志打印或接口返回完整 Key。
 - 不要把 AI 建议标签自动写入标签库，第一版应由管理员确认，避免污染数据。
 - 不做无关重构，不删除用户已有改动，不为了“顺手优化”扩大范围。
 
@@ -140,18 +143,19 @@ mysql -uroot -p ai_frontier_station < database/init-data.sql
 - 已完成 Vue 前台门户、Vue 后台管理、Spring Boot 后端和 MySQL 数据库。
 - 已完成内容、分类、标签、来源、外部引用等核心数据模型。
 - 已完成前台首页、内容发现页、详情页、搜索筛选、排序和双主题。
-- 已完成后台 Dashboard、内容管理、分类管理、标签管理、来源管理、API 设置页。
+- 已完成后台登录、Dashboard、内容管理、分类管理、标签管理、来源管理、API 设置页。
 - 已接入 GitHub REST API 查询与仓库导入。
-- 已接入百炼 AI 来源整理工作流。
+- 已接入百炼 / MiMo 可选 AI Provider 的来源整理工作流。
+- 已接入 arXiv 论文搜索导入和 HuggingFace Daily Papers 导入。
+- 已完成 API Key 加密存储，支持后端重启后继续读取已保存配置。
 - 已完成 Markdown 安全清洗、后台深色模式、后台包体优化、MiMo 申请截图和开源 README。
 
 ## 后续优先级
 
 推荐下一阶段优先级：
 
-1. MiMo API Provider 适配：把 MiMo 作为新的 AI 总结 Provider 接入现有 AI 来源整理流程。
-2. GitHub 项目热度同步：定期刷新 star、fork、语言、更新时间等结构化字段。
-3. 管理后台鉴权：补管理员登录，保护 API 设置和内容管理。
-4. 数据源扩展：arXiv / Hugging Face Papers / 官方博客 RSS / 技术社区来源。
-5. 部署上线：前端可考虑 Cloudflare Pages，后端可考虑 Railway、Render 或其他 Java 服务托管。
-
+1. GitHub 项目热度同步：定期刷新 star、fork、语言、更新时间等结构化字段。
+2. CI/CD 与开源质量：补 GitHub Actions，自动跑后端编译和前后台构建。
+3. 部署上线：前端可考虑 Cloudflare Pages，后端可考虑 Railway、Render 或其他 Java 服务托管。
+4. 数据源扩展：官方博客 RSS、技术社区来源、榜单源快照。
+5. 权限增强：把单管理员登录升级为角色权限、操作审计和更安全的密钥轮换。
