@@ -19,6 +19,8 @@ mybatis-plus:
 app:
   project-name: AI前沿情报站
   current-stage: 工程骨架初始化
+  crypto:
+    master-key: ${API_MASTER_KEY:ai-frontier-station-default-key-2024}
   bailian:
     api-key: ${DASHSCOPE_API_KEY:}
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

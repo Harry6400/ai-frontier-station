@@ -27,20 +27,20 @@ const providers = computed(() => [
     status: status.value.bailian
   },
   {
-    key: 'mimo',
-    label: 'MiMo',
-    name: 'MiMo OpenAI-Compatible',
-    capability: 'AI 导读、推荐理由、标签建议生成，可与百炼结果对比',
-    placeholder: '请输入 MiMo API Key',
-    status: status.value.mimo
-  },
-  {
     key: 'github',
     label: 'GitHub',
     name: 'GitHub REST API',
     capability: '真实仓库查询、关键词搜索、项目导入数据回填',
     placeholder: '请输入 GitHub Token，可选；不填也能匿名查询公开仓库',
     status: status.value.github
+  },
+  {
+    key: 'mimo',
+    label: 'MiMo',
+    name: 'MiMo Token Plan',
+    capability: 'AI 导读、分类建议、标签建议、推荐理由生成（临时额度，后续可能替换）',
+    placeholder: '请输入 MiMo API Key，例如 sk-...',
+    status: status.value.mimo
   }
 ])
 
@@ -87,7 +87,7 @@ async function save(provider) {
     })
     form.apiKey = ''
     await loadStatus()
-    ElMessage.success('API 能力已启用')
+    ElMessage.success('API 密钥已加密存储到数据库')
   } catch (error) {
     ElMessage.error(error.message)
   }
@@ -95,7 +95,7 @@ async function save(provider) {
 
 async function clear(provider) {
   try {
-    await ElMessageBox.confirm('清除后本次后端运行内将不再使用该密钥，确认继续吗？', '清除 API 配置', { type: 'warning' })
+    await ElMessageBox.confirm('清除后将从数据库删除该密钥，后端重启后不再自动加载，确认继续吗？', '清除 API 配置', { type: 'warning' })
     await clearApiCredential(provider)
     await loadStatus()
     ElMessage.success('API 配置已清除')
@@ -115,8 +115,7 @@ onMounted(loadStatus)
       <span class="sidebar-kicker">Runtime Settings</span>
       <h3>API 设置</h3>
       <p>
-        这里用于课堂演示阶段临时启用外部能力。密钥只保存在 Spring Boot 运行内存里，
-        不写入数据库、不回显完整内容，后端重启后需要重新配置。
+        这里用于配置外部 API 能力。密钥会经过 AES-256 加密后存储到数据库，后端重启后自动加载，无需重新配置。
       </p>
     </div>
 
@@ -146,7 +145,7 @@ onMounted(loadStatus)
           <div>
             <span>保存位置</span>
             <strong>
-              {{ item.status.source === 'runtime' ? '后端内存' : item.status.source === 'environment' ? '环境变量' : '未启用' }}
+              {{ item.status.source === 'database' ? '加密存储' : item.status.source === 'runtime' ? '后端内存' : item.status.source === 'environment' ? '环境变量' : '未启用' }}
             </strong>
           </div>
           <div>
@@ -177,9 +176,9 @@ onMounted(loadStatus)
       <span class="sidebar-kicker">Defense Note</span>
       <h4>答辩时可以怎么讲</h4>
       <p>
-        这不是完整的生产级密钥管理，而是课程项目第一版的运行时配置方案。
-        它比把 Key 写死在代码里更安全，也比直接落库更适合演示。后续如果接登录权限，
-        可以继续扩展为管理员加密配置表。
+        API 密钥采用 AES-256-GCM 加密后存储到 MySQL 数据库，主密钥通过环境变量配置。
+        前端填写密钥后，后端验证并加密存储，重启后自动加载，无需重复输入。
+        这比纯内存存储更安全，也比明文落库更符合安全规范。
       </p>
     </div>
   </section>
