@@ -8,4 +8,6 @@ public class ApiSettingsStatusVO {
     private ApiCredentialStatusVO bailian;
 
     private ApiCredentialStatusVO github;
+
+    private ApiCredentialStatusVO mimo;
 }

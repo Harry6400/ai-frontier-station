@@ -22,11 +22,15 @@ public class ApiCredentialServiceImpl implements ApiCredentialService {
     @Value("${app.github.token:}")
     private String githubFallbackToken;
 
+    @Value("${app.mimo.api-key:}")
+    private String mimoFallbackKey;
+
     @Override
     public ApiSettingsStatusVO status() {
         ApiSettingsStatusVO vo = new ApiSettingsStatusVO();
         vo.setBailian(toStatus(PROVIDER_BAILIAN));
         vo.setGithub(toStatus(PROVIDER_GITHUB));
+        vo.setMimo(toStatus(PROVIDER_MIMO));
         return vo;
     }
 
@@ -58,6 +62,11 @@ public class ApiCredentialServiceImpl implements ApiCredentialService {
         return resolve(PROVIDER_GITHUB, fallback);
     }
 
+    @Override
+    public String resolveMimoApiKey(String fallback) {
+        return resolve(PROVIDER_MIMO, fallback);
+    }
+
     private String resolve(String provider, String fallback) {
         RuntimeCredential credential = credentials.get(provider);
         if (credential != null && credential.apiKey() != null && !credential.apiKey().isBlank()) {
@@ -68,7 +77,14 @@ public class ApiCredentialServiceImpl implements ApiCredentialService {
 
     private ApiCredentialStatusVO toStatus(String provider) {
         RuntimeCredential credential = credentials.get(provider);
-        String fallback = PROVIDER_BAILIAN.equals(provider) ? bailianFallbackKey : githubFallbackToken;
+        String fallback;
+        if (PROVIDER_BAILIAN.equals(provider)) {
+            fallback = bailianFallbackKey;
+        } else if (PROVIDER_MIMO.equals(provider)) {
+            fallback = mimoFallbackKey;
+        } else {
+            fallback = githubFallbackToken;
+        }
         boolean hasRuntime = credential != null && credential.apiKey() != null && !credential.apiKey().isBlank();
         boolean hasFallback = !hasRuntime && fallback != null && !fallback.isBlank();
         ApiCredentialStatusVO vo = new ApiCredentialStatusVO();
@@ -82,7 +98,7 @@ public class ApiCredentialServiceImpl implements ApiCredentialService {
     }
 
     private void validateProvider(String provider) {
-        if (!PROVIDER_BAILIAN.equals(provider) && !PROVIDER_GITHUB.equals(provider)) {
+        if (!PROVIDER_BAILIAN.equals(provider) && !PROVIDER_GITHUB.equals(provider) && !PROVIDER_MIMO.equals(provider)) {
             throw new IllegalArgumentException("不支持的 API 配置类型");
         }
     }

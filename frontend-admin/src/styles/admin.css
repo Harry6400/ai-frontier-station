@@ -745,6 +745,30 @@ a {
     var(--admin-surface);
 }
 
+.ai-provider-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--admin-line-soft);
+  border-radius: 16px;
+  background: var(--admin-surface);
+}
+
+.ai-provider-label {
+  color: var(--admin-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai-provider-hint {
+  color: var(--admin-text-secondary);
+  font-size: 0.86rem;
+}
+
 .ai-source-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);

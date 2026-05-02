@@ -25,4 +25,6 @@ public class AiSourceSummaryRequest {
     private String imageUrl;
 
     private String instruction;
+
+    private String provider;
 }

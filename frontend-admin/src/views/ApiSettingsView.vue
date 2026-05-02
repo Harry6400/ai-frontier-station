@@ -7,12 +7,14 @@ import { clearApiCredential, getApiSettingsStatus, saveApiCredential } from '../
 const loading = ref(false)
 const status = ref({
   bailian: { enabled: false, maskedKey: '', source: 'none', updatedAt: null },
-  github: { enabled: false, maskedKey: '', source: 'none', updatedAt: null }
+  github: { enabled: false, maskedKey: '', source: 'none', updatedAt: null },
+  mimo: { enabled: false, maskedKey: '', source: 'none', updatedAt: null }
 })
 
 const forms = reactive({
   bailian: { apiKey: '', remark: '用于 AI 来源整理和 AI 导读生成' },
-  github: { apiKey: '', remark: '用于 GitHub 仓库查询和搜索' }
+  github: { apiKey: '', remark: '用于 GitHub 仓库查询和搜索' },
+  mimo: { apiKey: '', remark: '用于 MiMo AI 来源整理和导读生成（临时额度）' }
 })
 
 const providers = computed(() => [
@@ -23,6 +25,14 @@ const providers = computed(() => [
     capability: 'AI 导读、分类建议、标签建议、推荐理由生成',
     placeholder: '请输入百炼 API Key，例如 sk-...',
     status: status.value.bailian
+  },
+  {
+    key: 'mimo',
+    label: 'MiMo',
+    name: 'MiMo OpenAI-Compatible',
+    capability: 'AI 导读、推荐理由、标签建议生成，可与百炼结果对比',
+    placeholder: '请输入 MiMo API Key',
+    status: status.value.mimo
   },
   {
     key: 'github',

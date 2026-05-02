@@ -27,46 +27,79 @@ public class AiSummaryServiceImpl implements AiSummaryService {
     private final ApiCredentialService apiCredentialService;
 
     @Value("${app.bailian.api-key:}")
-    private String apiKey;
+    private String bailianApiKey;
 
     @Value("${app.bailian.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}")
-    private String baseUrl;
+    private String bailianBaseUrl;
 
     @Value("${app.bailian.model:qwen-plus}")
-    private String model;
+    private String bailianModel;
+
+    @Value("${app.mimo.api-key:}")
+    private String mimoApiKey;
+
+    @Value("${app.mimo.base-url:https://token-plan-cn.xiaomimimo.com/v1}")
+    private String mimoBaseUrl;
+
+    @Value("${app.mimo.model:mimo-v2.5-pro}")
+    private String mimoModel;
+
+    private static final String PROVIDER_MIMO = "mimo";
 
     @Override
     public AiSourceSummaryVO summarizeSource(AiSourceSummaryRequest request) {
-        String resolvedApiKey = apiCredentialService.resolveBailianApiKey(apiKey);
+        String provider = resolveProvider(request.getProvider());
+        String resolvedApiKey;
+        String displayName;
+        if (PROVIDER_MIMO.equals(provider)) {
+            resolvedApiKey = apiCredentialService.resolveMimoApiKey(mimoApiKey);
+            displayName = "MiMo";
+        } else {
+            resolvedApiKey = apiCredentialService.resolveBailianApiKey(bailianApiKey);
+            displayName = "百炼";
+        }
         if (resolvedApiKey == null || resolvedApiKey.isBlank()) {
-            throw new IllegalArgumentException("未启用 AI 总结能力，请先在后端环境变量 DASHSCOPE_API_KEY 配置百炼 API Key");
+            throw new IllegalArgumentException("未启用 AI 总结能力，请先配置对应 Provider 的 API Key");
         }
         if (request.getOriginalSummary() == null || request.getOriginalSummary().trim().length() < 20) {
             throw new IllegalArgumentException("原文摘要信息过短，请至少填写 20 个字，方便 AI 生成可靠导读");
         }
 
+        String providerBaseUrl = PROVIDER_MIMO.equals(provider) ? mimoBaseUrl : bailianBaseUrl;
+        String providerModel = PROVIDER_MIMO.equals(provider) ? mimoModel : bailianModel;
         String rawResponse;
         try {
             rawResponse = RestClient.builder()
-                    .baseUrl(baseUrl)
+                    .baseUrl(providerBaseUrl)
                     .defaultHeader("Authorization", "Bearer " + resolvedApiKey.trim())
                     .build()
                     .post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(buildChatRequest(request))
+                    .body(buildChatRequest(request, providerModel))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientException ex) {
-            throw new IllegalArgumentException("百炼服务暂时无法访问，请检查网络、API Key 或稍后重试");
+            throw new IllegalArgumentException(displayName + " 服务暂时无法访问，请检查网络、API Key 或稍后重试");
         }
 
-        return parseSummaryResponse(request, rawResponse);
+        return parseSummaryResponse(request, rawResponse, provider);
     }
 
-    private Map<String, Object> buildChatRequest(AiSourceSummaryRequest request) {
+    private String resolveProvider(String provider) {
+        if (provider == null || provider.isBlank()) {
+            return ApiCredentialService.PROVIDER_BAILIAN;
+        }
+        String trimmed = provider.trim().toLowerCase();
+        if (PROVIDER_MIMO.equals(trimmed)) {
+            return PROVIDER_MIMO;
+        }
+        return ApiCredentialService.PROVIDER_BAILIAN;
+    }
+
+    private Map<String, Object> buildChatRequest(AiSourceSummaryRequest request, String providerModel) {
         return Map.of(
-                "model", model,
+                "model", providerModel,
                 "temperature", 0.3,
                 "messages", List.of(
                         Map.of("role", "system", "content", """
@@ -113,7 +146,8 @@ public class AiSummaryServiceImpl implements AiSummaryService {
         );
     }
 
-    private AiSourceSummaryVO parseSummaryResponse(AiSourceSummaryRequest request, String rawResponse) {
+    private AiSourceSummaryVO parseSummaryResponse(AiSourceSummaryRequest request, String rawResponse, String provider) {
+        String displayName = PROVIDER_MIMO.equals(provider) ? "MiMo" : "百炼";
         try {
             JsonNode root = objectMapper.readTree(rawResponse);
             String content = root.path("choices").path(0).path("message").path("content").asText();
@@ -121,17 +155,17 @@ public class AiSummaryServiceImpl implements AiSummaryService {
             AiSourceSummaryVO vo = new AiSourceSummaryVO();
             vo.setSuggestedTitle(text(payload, "suggestedTitle", request.getSourceTitle()));
             vo.setSummary(text(payload, "summary", request.getOriginalSummary()));
-            vo.setSourceBrief(text(payload, "sourceBrief", "该来源由后台人工录入，并由百炼生成结构化导读。"));
+            vo.setSourceBrief(text(payload, "sourceBrief", "该来源由后台人工录入，并由" + displayName + "生成结构化导读。"));
             vo.setAiSummary(text(payload, "aiSummary", vo.getSummary()));
             vo.setRecommendationReason(text(payload, "recommendationReason", "根据当前录入信息判断，该内容适合作为 AI 前沿动态收录。"));
             vo.setImportanceScore(clamp(payload.path("importanceScore").asInt(60), 1, 100));
             vo.setTagSuggestions(parseTags(payload.path("tagSuggestions")));
             vo.setReadingTime(Math.max(3, payload.path("readingTime").asInt(5)));
             vo.setBodyMarkdown(text(payload, "bodyMarkdown", buildFallbackBody(request, vo)));
-            vo.setExtraJson(buildExtraJson(request, vo));
+            vo.setExtraJson(buildExtraJson(request, vo, provider));
             return vo;
         } catch (Exception ex) {
-            throw new IllegalArgumentException("百炼返回内容解析失败，请稍后重试或检查输入信息是否过短");
+            throw new IllegalArgumentException(displayName + " 返回内容解析失败，请稍后重试或检查输入信息是否过短");
         }
     }
 
@@ -166,7 +200,7 @@ public class AiSummaryServiceImpl implements AiSummaryService {
         ).trim();
     }
 
-    private String buildExtraJson(AiSourceSummaryRequest request, AiSourceSummaryVO vo) {
+    private String buildExtraJson(AiSourceSummaryRequest request, AiSourceSummaryVO vo, String provider) {
         Map<String, Object> extra = new LinkedHashMap<>();
         extra.put("externalType", resolveExternalType(request.getSourceType()));
         extra.put("aiSummary", vo.getAiSummary());
@@ -180,7 +214,7 @@ public class AiSummaryServiceImpl implements AiSummaryService {
         extra.put("sourceImage", blankToNull(request.getImageUrl()));
         extra.put("originalSummary", blankToNull(request.getOriginalSummary()));
         extra.put("originalExcerpt", blankToNull(request.getOriginalExcerpt()));
-        extra.put("aiProvider", "Alibaba Bailian / DashScope");
+        extra.put("aiProvider", PROVIDER_MIMO.equals(provider) ? "MiMo" : "Alibaba Bailian / DashScope");
         extra.put("importMode", "manual_source_ai_summary");
         try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(extra);

@@ -255,7 +255,8 @@ const aiSourceForm = reactive({
   instruction: '请按 AI 开发者视角提炼价值，避免夸大。',
   categoryId: null,
   sourceId: null,
-  tagIds: []
+  tagIds: [],
+  provider: 'bailian'
 })
 
 function getContentTypeMeta(type) {
@@ -680,6 +681,7 @@ function applyAiSourceTemplate(templateKey) {
   aiSourceForm.originalExcerpt = ''
   aiSourceForm.imageUrl = ''
   aiSourceForm.instruction = template.instruction
+  aiSourceForm.provider = 'bailian'
   aiSourceGenerated.value = null
 }
 
@@ -702,7 +704,8 @@ async function generateAiSourceSummary() {
       originalSummary: aiSourceForm.originalSummary,
       originalExcerpt: aiSourceForm.originalExcerpt || null,
       imageUrl: aiSourceForm.imageUrl || null,
-      instruction: aiSourceForm.instruction || null
+      instruction: aiSourceForm.instruction || null,
+      provider: aiSourceForm.provider || 'bailian'
     })
     aiSourceGenerated.value = res.data
     applyMatchedSuggestedTags()
@@ -721,14 +724,14 @@ function applyMatchedSuggestedTags() {
 
 function formatAiSourceError(error) {
   const message = error?.message || 'AI 导读生成失败'
-  if (message.includes('DASHSCOPE_API_KEY') || message.includes('未启用 AI 总结能力')) {
-    return '未启用 AI 总结能力：请先在后端启动环境中配置 DASHSCOPE_API_KEY。'
+  if (message.includes('DASHSCOPE_API_KEY') || message.includes('MIMO_API_KEY') || message.includes('未启用 AI 总结能力')) {
+    return '未启用 AI 总结能力：请先在 API 设置页配置对应 Provider 的 API Key。'
   }
   if (message.includes('Network Error') || message.includes('timeout') || message.includes('无法访问')) {
-    return '百炼服务暂时无法访问：请检查网络、API Key 是否有效，或稍后重试。'
+    return 'AI Provider 服务暂时无法访问：请检查网络、API Key 是否有效，或稍后重试。'
   }
   if (message.includes('解析失败')) {
-    return '百炼返回格式不符合预期：请补充更清楚的来源摘要后重试。'
+    return 'AI Provider 返回格式不符合预期：请补充更清楚的来源摘要后重试。'
   }
   if (message.includes('过短')) {
     return message
@@ -794,7 +797,7 @@ function fillContentFormFromAiSource() {
   form.categoryId = payload.categoryId
   form.sourceId = payload.sourceId
   form.sourceUrl = payload.sourceUrl
-  form.authorName = '百炼辅助整理'
+  form.authorName = aiSourceForm.provider === 'mimo' ? 'MiMo辅助整理' : '百炼辅助整理'
   form.publishStatus = 'DRAFT'
   form.featuredLevel = payload.importanceScore >= 85 ? 3 : payload.importanceScore >= 70 ? 2 : 1
   form.readingTime = aiSourceGenerated.value.readingTime || 6
@@ -1601,11 +1604,11 @@ onMounted(initialize)
       class="ai-source-dialog"
     >
       <div class="editor-guide ai-source-guide">
-        <span class="sidebar-kicker">Bailian Summary Layer</span>
-        <h4>人工提供来源，百炼生成导读</h4>
+        <span class="sidebar-kicker">AI Summary Layer</span>
+        <h4>人工提供来源，AI Provider 生成导读</h4>
         <p>
           这里不做全网爬虫，也不全文转载原文。你输入原始链接、摘要和关键摘录，后端用
-          DASHSCOPE_API_KEY 调用百炼生成 AI 导读，确认后创建为草稿。
+          百炼或 MiMo 生成 AI 导读，确认后创建为草稿。
         </p>
         <div class="ai-source-steps">
           <span :class="{ 'is-active': aiSourceStep === '填写来源' }">1. 填写来源</span>
@@ -1626,6 +1629,17 @@ onMounted(initialize)
           <strong>{{ template.label }}</strong>
           <span>{{ template.sourceName }}</span>
         </button>
+      </div>
+
+      <div class="ai-provider-strip">
+        <span class="ai-provider-label">AI Provider</span>
+        <el-radio-group v-model="aiSourceForm.provider" size="small">
+          <el-radio-button value="bailian">百炼</el-radio-button>
+          <el-radio-button value="mimo">MiMo</el-radio-button>
+        </el-radio-group>
+        <span class="ai-provider-hint">
+          {{ aiSourceForm.provider === 'mimo' ? 'MiMo Token Plan 临时额度，后续可能替换' : '阿里百炼 / DashScope，当前主路径' }}
+        </span>
       </div>
 
       <div class="ai-source-layout">

@@ -45,4 +45,14 @@ public class ApiSettingsAdminController {
     public ApiResponse<ApiCredentialStatusVO> clearGitHub() {
         return ApiResponse.success("GitHub Token 已清除", apiCredentialService.clear(ApiCredentialService.PROVIDER_GITHUB));
     }
+
+    @PutMapping("/mimo")
+    public ApiResponse<ApiCredentialStatusVO> saveMimo(@Valid @RequestBody ApiCredentialSaveRequest request) {
+        return ApiResponse.success("MiMo API Key 已启用", apiCredentialService.save(ApiCredentialService.PROVIDER_MIMO, request));
+    }
+
+    @DeleteMapping("/mimo")
+    public ApiResponse<ApiCredentialStatusVO> clearMimo() {
+        return ApiResponse.success("MiMo API Key 已清除", apiCredentialService.clear(ApiCredentialService.PROVIDER_MIMO));
+    }
 }

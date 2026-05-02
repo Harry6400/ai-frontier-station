@@ -10,6 +10,8 @@ public interface ApiCredentialService {
 
     String PROVIDER_GITHUB = "github";
 
+    String PROVIDER_MIMO = "mimo";
+
     ApiSettingsStatusVO status();
 
     ApiCredentialStatusVO save(String provider, ApiCredentialSaveRequest request);
@@ -19,4 +21,6 @@ public interface ApiCredentialService {
     String resolveBailianApiKey(String fallback);
 
     String resolveGitHubToken(String fallback);
+
+    String resolveMimoApiKey(String fallback);
 }
