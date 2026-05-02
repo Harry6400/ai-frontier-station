@@ -1,10 +1,17 @@
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus/es/components/message/index'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import { useAdminThemeStore } from './stores/useAdminThemeStore'
+import { useAuthStore } from './stores/useAuthStore'
 
 const route = useRoute()
+const router = useRouter()
 const themeStore = useAdminThemeStore()
+const authStore = useAuthStore()
+
+const isLoginPage = computed(() => route.name === 'login')
 
 const navItems = [
   { label: '概览', to: '/' },
@@ -53,11 +60,28 @@ const nextThemeLabel = computed(() => (themeStore.isDark ? '切换浅色' : '切
 
 onMounted(() => {
   themeStore.initTheme()
+  if (authStore.isLoggedIn) {
+    authStore.fetchCurrentUser()
+  }
 })
+
+async function handleLogout() {
+  try {
+    await ElMessageBox.confirm('确认退出登录吗？', '退出登录', { type: 'warning' })
+    authStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  } catch {
+    // cancelled
+  }
+}
 </script>
 
 <template>
-  <div class="admin-shell">
+  <div v-if="isLoginPage">
+    <router-view />
+  </div>
+  <div v-else class="admin-shell">
     <aside class="admin-sidebar">
       <div class="admin-sidebar-top">
         <div>
@@ -88,6 +112,11 @@ onMounted(() => {
         </div>
 
         <div class="admin-header-actions">
+          <div class="user-info">
+            <span>{{ authStore.displayName || authStore.username }}</span>
+            <el-button size="small" @click="handleLogout">退出</el-button>
+          </div>
+
           <button class="admin-theme-toggle" type="button" @click="themeStore.toggleTheme()">
             <span>{{ themeStore.modeLabel }}</span>
             <strong>{{ nextThemeLabel }}</strong>
@@ -103,3 +132,13 @@ onMounted(() => {
     </main>
   </div>
 </template>
+
+<style scoped>
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+</style>

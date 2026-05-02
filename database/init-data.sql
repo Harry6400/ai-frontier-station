@@ -6,6 +6,7 @@ DELETE FROM ai_content;
 DELETE FROM ai_tag;
 DELETE FROM ai_source;
 DELETE FROM ai_category;
+DELETE FROM ai_admin_user;
 
 ALTER TABLE ai_category AUTO_INCREMENT = 1;
 ALTER TABLE ai_tag AUTO_INCREMENT = 1;
@@ -13,6 +14,7 @@ ALTER TABLE ai_source AUTO_INCREMENT = 1;
 ALTER TABLE ai_content AUTO_INCREMENT = 1;
 ALTER TABLE ai_content_tag AUTO_INCREMENT = 1;
 ALTER TABLE ai_content_external_ref AUTO_INCREMENT = 1;
+ALTER TABLE ai_admin_user AUTO_INCREMENT = 1;
 
 INSERT INTO ai_category (name, slug, description, sort_order, is_enabled) VALUES
 ('AI资讯', 'ai-news', '面向模型、产品与行业动态的资讯栏目', 1, 1),
@@ -133,3 +135,6 @@ INSERT INTO ai_content_external_ref (content_id, ref_type, external_id, external
 (1, 'github_repo', 'trending-demo-001', 'https://github.com/trending', JSON_OBJECT('source', 'seed'), NOW()),
 (2, 'arxiv_paper', 'arxiv-demo-001', 'https://arxiv.org', JSON_OBJECT('source', 'seed'), NOW()),
 (3, 'official_post', 'openai-demo-001', 'https://openai.com/news', JSON_OBJECT('source', 'seed'), NOW());
+
+INSERT INTO ai_admin_user (username, password_hash, display_name, role, is_enabled) VALUES
+('admin', '$2y$10$.vdOnVZcNImd5eccQwby.O25KEplZbt99cjb7LG5koNYNZBtolPAO', '系统管理员', 'admin', 1);
