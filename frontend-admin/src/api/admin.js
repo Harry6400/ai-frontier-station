@@ -120,6 +120,14 @@ export function importArxivPaper(payload) {
   return http.post('/admin/import/arxiv-paper', payload)
 }
 
+export function getHuggingFaceDailyPapers() {
+  return http.get('/admin/huggingface/papers')
+}
+
+export function importHuggingFacePaper(payload) {
+  return http.post('/admin/import/huggingface-paper', payload)
+}
+
 export function createContentExternalRef(contentId, payload) {
   return http.post(`/admin/contents/${contentId}/external-refs`, payload)
 }

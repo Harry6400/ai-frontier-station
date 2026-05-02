@@ -7,6 +7,7 @@ import com.harry.aifrontier.dto.request.ContentQueryRequest;
 import com.harry.aifrontier.dto.request.ContentExternalRefSaveRequest;
 import com.harry.aifrontier.dto.request.ContentSaveRequest;
 import com.harry.aifrontier.dto.request.GitHubRepoImportRequest;
+import com.harry.aifrontier.dto.request.HuggingFacePaperImportRequest;
 import com.harry.aifrontier.dto.request.PortalContentQueryRequest;
 import com.harry.aifrontier.vo.ContentAdminListItemVO;
 import com.harry.aifrontier.vo.ContentDetailVO;
@@ -35,6 +36,8 @@ public interface ContentService {
     ContentDetailVO importAiSource(AiSourceImportRequest request);
 
     ContentDetailVO importArxivPaper(ArxivPaperImportRequest request);
+
+    ContentDetailVO importHuggingFacePaper(HuggingFacePaperImportRequest request);
 
     ContentExternalRefVO updateExternalRef(Long contentId, Long refId, ContentExternalRefSaveRequest request);
 

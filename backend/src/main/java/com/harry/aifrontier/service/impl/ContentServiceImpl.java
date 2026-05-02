@@ -12,6 +12,7 @@ import com.harry.aifrontier.dto.request.ContentQueryRequest;
 import com.harry.aifrontier.dto.request.ContentExternalRefSaveRequest;
 import com.harry.aifrontier.dto.request.ContentSaveRequest;
 import com.harry.aifrontier.dto.request.GitHubRepoImportRequest;
+import com.harry.aifrontier.dto.request.HuggingFacePaperImportRequest;
 import com.harry.aifrontier.dto.request.PortalContentQueryRequest;
 import com.harry.aifrontier.entity.Category;
 import com.harry.aifrontier.entity.Content;
@@ -180,6 +181,23 @@ public class ContentServiceImpl implements ContentService {
         refRequest.setRefType("arxiv_paper");
         refRequest.setExternalId(request.getArxivId().trim());
         refRequest.setExternalUrl("https://arxiv.org/abs/" + request.getArxivId().trim());
+        refRequest.setRawPayloadJson(contentRequest.getExtraJson());
+        refRequest.setSyncedAt(LocalDateTime.now());
+        createExternalRef(content.getId(), refRequest);
+
+        return adminDetail(content.getId());
+    }
+
+    @Override
+    @Transactional
+    public ContentDetailVO importHuggingFacePaper(HuggingFacePaperImportRequest request) {
+        ContentSaveRequest contentRequest = buildHuggingFaceContentRequest(request);
+        ContentDetailVO content = create(contentRequest);
+
+        ContentExternalRefSaveRequest refRequest = new ContentExternalRefSaveRequest();
+        refRequest.setRefType("huggingface_paper");
+        refRequest.setExternalId(request.getPaperId().trim());
+        refRequest.setExternalUrl(request.getHtmlUrl() != null ? request.getHtmlUrl() : "https://huggingface.co/papers/" + request.getPaperId().trim());
         refRequest.setRawPayloadJson(contentRequest.getExtraJson());
         refRequest.setSyncedAt(LocalDateTime.now());
         createExternalRef(content.getId(), refRequest);
@@ -562,6 +580,69 @@ public class ContentServiceImpl implements ContentService {
         extra.put("authors", request.getAuthors() != null ? request.getAuthors() : Collections.emptyList());
         extra.put("pdfUrl", request.getPdfUrl() != null ? request.getPdfUrl() : "https://arxiv.org/pdf/" + request.getArxivId().trim());
         extra.put("importMode", "arxiv_direct_import");
+        return writeJson(extra);
+    }
+
+    private ContentSaveRequest buildHuggingFaceContentRequest(HuggingFacePaperImportRequest request) {
+        ContentSaveRequest contentRequest = new ContentSaveRequest();
+        contentRequest.setTitle(request.getTitle().trim());
+        contentRequest.setSlug("hf-" + request.getPaperId().trim().replace(".", "-"));
+        contentRequest.setContentType("paper");
+        contentRequest.setSummary(request.getAbstractText().trim());
+        contentRequest.setCoverImage(null);
+        contentRequest.setCategoryId(request.getCategoryId());
+        contentRequest.setSourceId(request.getSourceId());
+        contentRequest.setSourceUrl(request.getHtmlUrl() != null ? request.getHtmlUrl() : "https://huggingface.co/papers/" + request.getPaperId().trim());
+        contentRequest.setAuthorName(request.getAuthors() != null ? String.join(", ", request.getAuthors()) : "HuggingFace");
+        contentRequest.setPublishStatus(request.getPublishStatus());
+        contentRequest.setFeaturedLevel(request.getLikes() != null && request.getLikes() > 100 ? 3 : request.getLikes() != null && request.getLikes() > 50 ? 2 : 1);
+        contentRequest.setReadingTime(10);
+        contentRequest.setBodyMarkdown(resolveHuggingFaceBodyMarkdown(request));
+        contentRequest.setExtraJson(buildHuggingFaceExtraJson(request));
+        contentRequest.setTagIds(request.getTagIds());
+        return contentRequest;
+    }
+
+    private String resolveHuggingFaceBodyMarkdown(HuggingFacePaperImportRequest request) {
+        if (request.getBodyMarkdown() != null && !request.getBodyMarkdown().isBlank()) {
+            return request.getBodyMarkdown().trim();
+        }
+        String authors = request.getAuthors() != null ? String.join(", ", request.getAuthors()) : "未知作者";
+        String stats = String.format("点赞数：%s | 评论数：%s",
+                request.getLikes() != null ? request.getLikes() : "未知",
+                request.getComments() != null ? request.getComments() : "未知");
+        return """
+                ## 论文摘要
+
+                %s
+
+                ## 作者
+
+                %s
+
+                ## 社区热度
+
+                %s
+
+                ## 相关链接
+
+                - [HuggingFace 页面](%s)
+                """.formatted(
+                request.getAbstractText().trim(),
+                authors,
+                stats,
+                request.getHtmlUrl() != null ? request.getHtmlUrl() : "https://huggingface.co/papers/" + request.getPaperId().trim()
+        ).trim();
+    }
+
+    private String buildHuggingFaceExtraJson(HuggingFacePaperImportRequest request) {
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("externalType", "huggingface_paper");
+        extra.put("huggingfaceId", request.getPaperId().trim());
+        extra.put("authors", request.getAuthors() != null ? request.getAuthors() : Collections.emptyList());
+        extra.put("likes", request.getLikes());
+        extra.put("comments", request.getComments());
+        extra.put("importMode", "huggingface_daily_papers");
         return writeJson(extra);
     }
 

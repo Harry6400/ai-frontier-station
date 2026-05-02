@@ -8,9 +8,11 @@ import {
   getContentDetail,
   getContentOptions,
   getContents,
+  getHuggingFaceDailyPapers,
   importAiSource,
   importArxivPaper,
   importGithubRepo,
+  importHuggingFacePaper,
   queryGithubRepo,
   removeContentExternalRef,
   removeContent,
@@ -265,6 +267,23 @@ const arxivImportForm = reactive({
   publishStatus: 'DRAFT'
 })
 const arxivImportFormRef = ref()
+const huggingfaceImportDialogVisible = ref(false)
+const huggingfaceSearchLoading = ref(false)
+const huggingfaceSearchResults = ref([])
+const huggingfaceImportForm = reactive({
+  paperId: '',
+  title: '',
+  authors: [],
+  abstractText: '',
+  htmlUrl: '',
+  likes: 0,
+  comments: 0,
+  categoryId: null,
+  sourceId: null,
+  tagIds: [],
+  publishStatus: 'DRAFT'
+})
+const huggingfaceImportFormRef = ref()
 const aiSourceForm = reactive({
   sourceTitle: '',
   sourceUrl: '',
@@ -1138,6 +1157,73 @@ async function submitArxivImport() {
   }
 }
 
+function openHuggingFaceImport() {
+  resetHuggingFaceImportForm()
+  huggingfaceImportDialogVisible.value = true
+  loadHuggingFaceDailyPapers()
+}
+
+async function loadHuggingFaceDailyPapers() {
+  huggingfaceSearchLoading.value = true
+  try {
+    const res = await getHuggingFaceDailyPapers()
+    huggingfaceSearchResults.value = res.data || []
+    if (!huggingfaceSearchResults.value.length) {
+      ElMessage.info('暂未获取到 HuggingFace 每日论文')
+    }
+  } catch (error) {
+    ElMessage.error(error.message)
+  } finally {
+    huggingfaceSearchLoading.value = false
+  }
+}
+
+function applyHuggingFaceCandidate(paper) {
+  huggingfaceImportForm.paperId = paper.paperId
+  huggingfaceImportForm.title = paper.title
+  huggingfaceImportForm.authors = paper.authors || []
+  huggingfaceImportForm.abstractText = paper.abstractText || ''
+  huggingfaceImportForm.htmlUrl = paper.htmlUrl || ''
+  huggingfaceImportForm.likes = paper.likes || 0
+  huggingfaceImportForm.comments = paper.comments || 0
+}
+
+function resetHuggingFaceImportForm() {
+  huggingfaceImportForm.paperId = ''
+  huggingfaceImportForm.title = ''
+  huggingfaceImportForm.authors = []
+  huggingfaceImportForm.abstractText = ''
+  huggingfaceImportForm.htmlUrl = ''
+  huggingfaceImportForm.likes = 0
+  huggingfaceImportForm.comments = 0
+  huggingfaceImportForm.categoryId = contentOptions.value.categories.find((item) => item.slug === 'paper-digest')?.id || null
+  huggingfaceImportForm.sourceId = contentOptions.value.sources.find((item) => item.slug === 'arxiv')?.id || null
+  huggingfaceImportForm.tagIds = []
+  huggingfaceImportForm.publishStatus = 'DRAFT'
+  huggingfaceSearchResults.value = []
+}
+
+async function submitHuggingFaceImport() {
+  await huggingfaceImportFormRef.value.validate()
+  try {
+    const authors = typeof huggingfaceImportForm.authors === 'string'
+      ? huggingfaceImportForm.authors.split(',').map((item) => item.trim()).filter(Boolean)
+      : huggingfaceImportForm.authors
+    await importHuggingFacePaper({
+      ...huggingfaceImportForm,
+      authors,
+      sourceId: huggingfaceImportForm.sourceId || null
+    })
+    ElMessage.success('HuggingFace 论文导入成功')
+    huggingfaceImportDialogVisible.value = false
+    filters.contentType = 'paper'
+    pagination.pageNum = 1
+    await loadContents()
+  } catch (error) {
+    ElMessage.error(error.message)
+  }
+}
+
 onMounted(initialize)
 </script>
 
@@ -1195,6 +1281,7 @@ onMounted(initialize)
         <el-button type="warning" @click="openAiSourceImport">AI 来源整理</el-button>
         <el-button type="success" @click="openGitHubImport">GitHub 项目导入</el-button>
         <el-button type="primary" plain @click="openArxivImport">arXiv 论文导入</el-button>
+        <el-button type="info" @click="openHuggingFaceImport">HuggingFace 论文导入</el-button>
         <el-button @click="openCreate">新建内容</el-button>
       </div>
 
@@ -2028,6 +2115,111 @@ onMounted(initialize)
       <template #footer>
         <el-button @click="arxivImportDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitArxivImport">导入为内容</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="huggingfaceImportDialogVisible"
+      title="HuggingFace 每日论文导入"
+      width="820px"
+      class="github-import-dialog"
+    >
+      <div class="editor-guide github-import-guide">
+        <span class="sidebar-kicker">HuggingFace Papers</span>
+        <h4>浏览 HuggingFace 每日热门论文，导入为平台内容</h4>
+        <p>
+          从 HuggingFace 每日论文推荐中选择热门论文，导入为平台内容。候选数据包含社区点赞数和评论数。
+        </p>
+      </div>
+
+      <div v-loading="huggingfaceSearchLoading" class="github-candidate-list">
+        <article
+          v-for="paper in huggingfaceSearchResults"
+          :key="paper.paperId"
+          class="github-candidate-card"
+        >
+          <div>
+            <strong>{{ paper.title }}</strong>
+            <p>{{ paper.abstractText }}</p>
+            <span>{{ paper.paperId }} · Likes {{ paper.likes || 0 }} · Comments {{ paper.comments || 0 }}</span>
+          </div>
+          <el-button size="small" @click="applyHuggingFaceCandidate(paper)">回填</el-button>
+        </article>
+      </div>
+
+      <el-form
+        ref="huggingfaceImportFormRef"
+        :model="huggingfaceImportForm"
+        label-width="112px"
+      >
+        <div class="form-grid">
+          <el-form-item label="论文 ID" prop="paperId" :rules="[{ required: true, message: '论文 ID 不能为空' }]">
+            <el-input v-model="huggingfaceImportForm.paperId" placeholder="例如 2401.01234" />
+          </el-form-item>
+          <el-form-item label="论文标题" prop="title" :rules="[{ required: true, message: '论文标题不能为空' }]">
+            <el-input v-model="huggingfaceImportForm.title" />
+          </el-form-item>
+          <el-form-item label="作者">
+            <el-input v-model="huggingfaceImportForm.authors" placeholder="作者名用逗号分隔" />
+          </el-form-item>
+          <el-form-item label="HF 链接">
+            <el-input v-model="huggingfaceImportForm.htmlUrl" placeholder="https://huggingface.co/papers/..." />
+          </el-form-item>
+          <el-form-item label="点赞数">
+            <el-input-number v-model="huggingfaceImportForm.likes" :min="0" />
+          </el-form-item>
+          <el-form-item label="评论数">
+            <el-input-number v-model="huggingfaceImportForm.comments" :min="0" />
+          </el-form-item>
+          <el-form-item label="分类" prop="categoryId" :rules="[{ required: true, message: '请选择分类' }]">
+            <el-select v-model="huggingfaceImportForm.categoryId">
+              <el-option
+                v-for="item in contentOptions.categories"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="来源">
+            <el-select v-model="huggingfaceImportForm.sourceId" clearable>
+              <el-option
+                v-for="item in contentOptions.sources"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="标签">
+            <el-select v-model="huggingfaceImportForm.tagIds" multiple clearable>
+              <el-option
+                v-for="item in contentOptions.tags"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="发布状态">
+            <el-select v-model="huggingfaceImportForm.publishStatus">
+              <el-option
+                v-for="item in contentOptions.publishStatuses"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+        </div>
+        <el-form-item label="论文摘要" prop="abstractText" :rules="[{ required: true, message: '论文摘要不能为空' }]">
+          <el-input v-model="huggingfaceImportForm.abstractText" type="textarea" :rows="4" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="huggingfaceImportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitHuggingFaceImport">导入为内容</el-button>
       </template>
     </el-dialog>
 
