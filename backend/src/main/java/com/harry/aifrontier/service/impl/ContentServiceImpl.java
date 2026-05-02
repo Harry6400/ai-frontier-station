@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harry.aifrontier.common.api.PageResult;
 import com.harry.aifrontier.dto.request.AiSourceImportRequest;
+import com.harry.aifrontier.dto.request.ArxivPaperImportRequest;
 import com.harry.aifrontier.dto.request.ContentQueryRequest;
 import com.harry.aifrontier.dto.request.ContentExternalRefSaveRequest;
 import com.harry.aifrontier.dto.request.ContentSaveRequest;
@@ -162,6 +163,23 @@ public class ContentServiceImpl implements ContentService {
         refRequest.setRefType(resolveAiSourceRefType(request.getSourceType()));
         refRequest.setExternalId(blankToNull(request.getSourceTitle()));
         refRequest.setExternalUrl(request.getSourceUrl().trim());
+        refRequest.setRawPayloadJson(contentRequest.getExtraJson());
+        refRequest.setSyncedAt(LocalDateTime.now());
+        createExternalRef(content.getId(), refRequest);
+
+        return adminDetail(content.getId());
+    }
+
+    @Override
+    @Transactional
+    public ContentDetailVO importArxivPaper(ArxivPaperImportRequest request) {
+        ContentSaveRequest contentRequest = buildArxivContentRequest(request);
+        ContentDetailVO content = create(contentRequest);
+
+        ContentExternalRefSaveRequest refRequest = new ContentExternalRefSaveRequest();
+        refRequest.setRefType("arxiv_paper");
+        refRequest.setExternalId(request.getArxivId().trim());
+        refRequest.setExternalUrl("https://arxiv.org/abs/" + request.getArxivId().trim());
         refRequest.setRawPayloadJson(contentRequest.getExtraJson());
         refRequest.setSyncedAt(LocalDateTime.now());
         createExternalRef(content.getId(), refRequest);
@@ -489,6 +507,62 @@ public class ContentServiceImpl implements ContentService {
         contentRequest.setExtraJson(writeJson(extra));
         contentRequest.setTagIds(request.getTagIds());
         return contentRequest;
+    }
+
+    private ContentSaveRequest buildArxivContentRequest(ArxivPaperImportRequest request) {
+        ContentSaveRequest contentRequest = new ContentSaveRequest();
+        contentRequest.setTitle(request.getTitle().trim());
+        contentRequest.setSlug("arxiv-" + request.getArxivId().trim().replace(".", "-"));
+        contentRequest.setContentType("paper");
+        contentRequest.setSummary(request.getAbstractText().trim());
+        contentRequest.setCoverImage(null);
+        contentRequest.setCategoryId(request.getCategoryId());
+        contentRequest.setSourceId(request.getSourceId());
+        contentRequest.setSourceUrl("https://arxiv.org/abs/" + request.getArxivId().trim());
+        contentRequest.setAuthorName(request.getAuthors() != null ? String.join(", ", request.getAuthors()) : "arXiv");
+        contentRequest.setPublishStatus(request.getPublishStatus());
+        contentRequest.setFeaturedLevel(1);
+        contentRequest.setReadingTime(10);
+        contentRequest.setBodyMarkdown(resolveArxivBodyMarkdown(request));
+        contentRequest.setExtraJson(buildArxivExtraJson(request));
+        contentRequest.setTagIds(request.getTagIds());
+        return contentRequest;
+    }
+
+    private String resolveArxivBodyMarkdown(ArxivPaperImportRequest request) {
+        if (request.getBodyMarkdown() != null && !request.getBodyMarkdown().isBlank()) {
+            return request.getBodyMarkdown().trim();
+        }
+        String authors = request.getAuthors() != null ? String.join(", ", request.getAuthors()) : "未知作者";
+        return """
+                ## 论文摘要
+
+                %s
+
+                ## 作者
+
+                %s
+
+                ## 相关链接
+
+                - [arXiv 页面](https://arxiv.org/abs/%s)
+                - [PDF 下载](https://arxiv.org/pdf/%s)
+                """.formatted(
+                request.getAbstractText().trim(),
+                authors,
+                request.getArxivId().trim(),
+                request.getArxivId().trim()
+        ).trim();
+    }
+
+    private String buildArxivExtraJson(ArxivPaperImportRequest request) {
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("externalType", "arxiv_paper");
+        extra.put("arxivId", request.getArxivId().trim());
+        extra.put("authors", request.getAuthors() != null ? request.getAuthors() : Collections.emptyList());
+        extra.put("pdfUrl", request.getPdfUrl() != null ? request.getPdfUrl() : "https://arxiv.org/pdf/" + request.getArxivId().trim());
+        extra.put("importMode", "arxiv_direct_import");
+        return writeJson(extra);
     }
 
     private String buildGitHubBodyMarkdown(GitHubRepoImportRequest request, List<String> topics) {

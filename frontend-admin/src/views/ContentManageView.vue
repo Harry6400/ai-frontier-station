@@ -9,10 +9,12 @@ import {
   getContentOptions,
   getContents,
   importAiSource,
+  importArxivPaper,
   importGithubRepo,
   queryGithubRepo,
   removeContentExternalRef,
   removeContent,
+  searchArxivPapers,
   searchGithubRepos,
   summarizeAiSource,
   updateContent,
@@ -243,6 +245,26 @@ const githubSearchForm = reactive({
   pageNum: 1,
   pageSize: 8
 })
+const arxivImportDialogVisible = ref(false)
+const arxivSearchLoading = ref(false)
+const arxivSearchResults = ref([])
+const arxivSearchForm = reactive({
+  query: 'cat:cs.AI',
+  start: 0,
+  maxResults: 8
+})
+const arxivImportForm = reactive({
+  arxivId: '',
+  title: '',
+  authors: [],
+  abstractText: '',
+  pdfUrl: '',
+  categoryId: null,
+  sourceId: null,
+  tagIds: [],
+  publishStatus: 'DRAFT'
+})
+const arxivImportFormRef = ref()
 const aiSourceForm = reactive({
   sourceTitle: '',
   sourceUrl: '',
@@ -1045,6 +1067,77 @@ async function handleStatus(row, status) {
   }
 }
 
+function openArxivImport() {
+  resetArxivImportForm()
+  arxivImportDialogVisible.value = true
+  nextTick(() => arxivImportFormRef.value?.clearValidate())
+}
+
+async function searchArxiv() {
+  if (!arxivSearchForm.query.trim()) {
+    ElMessage.warning('请先输入 arXiv 搜索条件')
+    return
+  }
+  arxivSearchLoading.value = true
+  try {
+    const res = await searchArxivPapers({
+      query: arxivSearchForm.query,
+      start: arxivSearchForm.start,
+      maxResults: arxivSearchForm.maxResults
+    })
+    arxivSearchResults.value = res.data.records || []
+    if (!arxivSearchResults.value.length) {
+      ElMessage.info('没有找到匹配的 arXiv 论文')
+    }
+  } catch (error) {
+    ElMessage.error(error.message)
+  } finally {
+    arxivSearchLoading.value = false
+  }
+}
+
+function applyArxivCandidate(paper) {
+  arxivImportForm.arxivId = paper.arxivId
+  arxivImportForm.title = paper.title
+  arxivImportForm.authors = paper.authors || []
+  arxivImportForm.abstractText = paper.abstractText || ''
+  arxivImportForm.pdfUrl = paper.pdfUrl || ''
+}
+
+function resetArxivImportForm() {
+  arxivImportForm.arxivId = ''
+  arxivImportForm.title = ''
+  arxivImportForm.authors = []
+  arxivImportForm.abstractText = ''
+  arxivImportForm.pdfUrl = ''
+  arxivImportForm.categoryId = contentOptions.value.categories.find((item) => item.slug === 'paper-digest')?.id || null
+  arxivImportForm.sourceId = contentOptions.value.sources.find((item) => item.slug === 'arxiv')?.id || null
+  arxivImportForm.tagIds = []
+  arxivImportForm.publishStatus = 'DRAFT'
+  arxivSearchResults.value = []
+}
+
+async function submitArxivImport() {
+  await arxivImportFormRef.value.validate()
+  try {
+    const authors = typeof arxivImportForm.authors === 'string'
+      ? arxivImportForm.authors.split(',').map((item) => item.trim()).filter(Boolean)
+      : arxivImportForm.authors
+    await importArxivPaper({
+      ...arxivImportForm,
+      authors,
+      sourceId: arxivImportForm.sourceId || null
+    })
+    ElMessage.success('arXiv 论文导入成功')
+    arxivImportDialogVisible.value = false
+    filters.contentType = 'paper'
+    pagination.pageNum = 1
+    await loadContents()
+  } catch (error) {
+    ElMessage.error(error.message)
+  }
+}
+
 onMounted(initialize)
 </script>
 
@@ -1101,6 +1194,7 @@ onMounted(initialize)
         <el-button @click="clearFilters">清空筛选</el-button>
         <el-button type="warning" @click="openAiSourceImport">AI 来源整理</el-button>
         <el-button type="success" @click="openGitHubImport">GitHub 项目导入</el-button>
+        <el-button type="primary" plain @click="openArxivImport">arXiv 论文导入</el-button>
         <el-button @click="openCreate">新建内容</el-button>
       </div>
 
@@ -1826,6 +1920,114 @@ onMounted(initialize)
         <el-button type="primary" :disabled="!aiSourceGenerated" @click="submitAiSourceImport">
           创建草稿
         </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="arxivImportDialogVisible"
+      title="arXiv 论文导入"
+      width="820px"
+      class="github-import-dialog"
+    >
+      <div class="editor-guide github-import-guide">
+        <span class="sidebar-kicker">arXiv API</span>
+        <h4>搜索 arXiv 论文，导入为平台内容</h4>
+        <p>
+          通过 arXiv API 搜索 AI 相关论文，选择候选后回填表单，再导入为草稿内容和外部引用记录。
+        </p>
+      </div>
+
+      <div class="github-api-panel">
+        <strong>搜索 arXiv 论文</strong>
+        <div class="github-query-row">
+          <el-input v-model="arxivSearchForm.query" placeholder="例如 cat:cs.AI / transformer attention / au:Hinton" />
+          <el-input-number v-model="arxivSearchForm.maxResults" :min="1" :max="50" />
+          <el-button :loading="arxivSearchLoading" type="primary" @click="searchArxiv">搜索</el-button>
+        </div>
+      </div>
+
+      <div v-if="arxivSearchResults.length" class="github-candidate-list">
+        <article
+          v-for="paper in arxivSearchResults"
+          :key="paper.arxivId"
+          class="github-candidate-card"
+        >
+          <div>
+            <strong>{{ paper.title }}</strong>
+            <p>{{ paper.abstractText }}</p>
+            <span>{{ paper.arxivId }} · {{ (paper.authors || []).join(', ') }}</span>
+          </div>
+          <el-button size="small" @click="applyArxivCandidate(paper)">回填</el-button>
+        </article>
+      </div>
+
+      <el-form
+        ref="arxivImportFormRef"
+        :model="arxivImportForm"
+        label-width="112px"
+      >
+        <div class="form-grid">
+          <el-form-item label="arXiv ID" prop="arxivId" :rules="[{ required: true, message: 'arXiv ID 不能为空' }]">
+            <el-input v-model="arxivImportForm.arxivId" placeholder="例如 2501.00001" />
+          </el-form-item>
+          <el-form-item label="论文标题" prop="title" :rules="[{ required: true, message: '论文标题不能为空' }]">
+            <el-input v-model="arxivImportForm.title" />
+          </el-form-item>
+          <el-form-item label="作者">
+            <el-input v-model="arxivImportForm.authors" placeholder="作者名用逗号分隔" />
+          </el-form-item>
+          <el-form-item label="PDF 链接">
+            <el-input v-model="arxivImportForm.pdfUrl" placeholder="https://arxiv.org/pdf/..." />
+          </el-form-item>
+          <el-form-item label="分类" prop="categoryId" :rules="[{ required: true, message: '请选择分类' }]">
+            <el-select v-model="arxivImportForm.categoryId">
+              <el-option
+                v-for="item in contentOptions.categories"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="来源">
+            <el-select v-model="arxivImportForm.sourceId" clearable>
+              <el-option
+                v-for="item in contentOptions.sources"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="标签">
+            <el-select v-model="arxivImportForm.tagIds" multiple clearable>
+              <el-option
+                v-for="item in contentOptions.tags"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="发布状态">
+            <el-select v-model="arxivImportForm.publishStatus">
+              <el-option
+                v-for="item in contentOptions.publishStatuses"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+        </div>
+        <el-form-item label="论文摘要" prop="abstractText" :rules="[{ required: true, message: '论文摘要不能为空' }]">
+          <el-input v-model="arxivImportForm.abstractText" type="textarea" :rows="4" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="arxivImportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitArxivImport">导入为内容</el-button>
       </template>
     </el-dialog>
 

@@ -108,6 +108,18 @@ export function importAiSource(payload) {
   return http.post('/admin/import/ai-source', payload)
 }
 
+export function searchArxivPapers(params) {
+  return http.get('/admin/arxiv/search', { params })
+}
+
+export function findArxivPaper(arxivId) {
+  return http.get('/admin/arxiv/paper', { params: { arxivId } })
+}
+
+export function importArxivPaper(payload) {
+  return http.post('/admin/import/arxiv-paper', payload)
+}
+
 export function createContentExternalRef(contentId, payload) {
   return http.post(`/admin/contents/${contentId}/external-refs`, payload)
 }

@@ -2,6 +2,7 @@ package com.harry.aifrontier.controller.admin;
 
 import com.harry.aifrontier.common.api.ApiResponse;
 import com.harry.aifrontier.dto.request.AiSourceImportRequest;
+import com.harry.aifrontier.dto.request.ArxivPaperImportRequest;
 import com.harry.aifrontier.dto.request.GitHubRepoImportRequest;
 import com.harry.aifrontier.service.ContentService;
 import com.harry.aifrontier.vo.ContentDetailVO;
@@ -27,5 +28,10 @@ public class ImportAdminController {
     @PostMapping("/ai-source")
     public ApiResponse<ContentDetailVO> importAiSource(@Valid @RequestBody AiSourceImportRequest request) {
         return ApiResponse.success("AI 来源整理内容创建成功", contentService.importAiSource(request));
+    }
+
+    @PostMapping("/arxiv-paper")
+    public ApiResponse<ContentDetailVO> importArxivPaper(@Valid @RequestBody ArxivPaperImportRequest request) {
+        return ApiResponse.success("arXiv 论文导入成功", contentService.importArxivPaper(request));
     }
 }
