@@ -49,9 +49,9 @@ const headerMetaMap = {
     description: '管理 GitHub、论文站点、官方博客与人工录入来源，支撑未来采集扩展。'
   },
   'api-settings': {
-    kicker: 'Runtime Credentials',
+    kicker: 'Encrypted Credentials',
     title: 'API 能力设置',
-    description: '在后台临时启用百炼与 GitHub 能力，密钥只保存在后端运行内存中。'
+    description: '在后台配置百炼、MiMo 与 GitHub 能力，密钥加密存储到数据库并仅展示掩码状态。'
   }
 }
 
