@@ -160,7 +160,7 @@ const AI_SOURCE_TEMPLATES = {
     sourceTitle: '人工发现的一条 AI 前沿信息',
     sourceUrl: 'https://example.com/manual-source',
     originalSummary: '这里记录你自己发现的 AI 信息重点，适合暂时还没有结构化来源接口的内容。',
-    instruction: '请按内容平台导读方式总结，保持中性、可信、适合课堂演示。'
+    instruction: '请按内容平台导读方式总结，保持中性、可信，方便后续检索和复盘。'
   }
 }
 
@@ -551,7 +551,7 @@ const formChecklist = computed(() => [
   {
     label: '已发布内容建议补来源链接',
     passed: form.publishStatus !== 'PUBLISHED' || !!form.sourceUrl.trim(),
-    hint: '发布内容有原始链接更适合答辩和演示'
+    hint: '发布内容建议保留原始链接，方便追溯来源'
   }
 ])
 const passedChecklistCount = computed(() => formChecklist.value.filter((item) => item.passed).length)
@@ -1371,7 +1371,7 @@ onMounted(initialize)
           <div class="editor-guide">
             <span class="sidebar-kicker">Editor</span>
             <h4>{{ editingId ? '编辑内容录入台' : '新建内容录入台' }}</h4>
-            <p>左侧录入字段，右侧同步查看预览和提交前检查，方便你在答辩时解释“后台不仅能存数据，也能帮助运营确认展示效果”。</p>
+            <p>左侧录入字段，右侧同步查看预览和提交前检查，方便你在发布前确认内容结构和展示效果。</p>
           </div>
 
           <el-alert
@@ -1466,7 +1466,7 @@ onMounted(initialize)
               <el-input v-model="form.summary" type="textarea" :rows="3" />
             </el-form-item>
             <el-form-item label="封面图">
-              <el-input v-model="form.coverImage" placeholder="当前阶段可先留空" />
+              <el-input v-model="form.coverImage" placeholder="可选，留空时使用默认内容样式" />
             </el-form-item>
             <el-form-item label="正文" prop="bodyMarkdown">
               <el-input v-model="form.bodyMarkdown" type="textarea" :rows="12" />
@@ -1917,7 +1917,7 @@ onMounted(initialize)
                 v-model="aiSourceForm.instruction"
                 type="textarea"
                 :rows="2"
-                placeholder="例如：偏工程实践、偏科研动态、偏课堂展示"
+                placeholder="例如：偏工程实践、偏科研动态、偏产品观察"
               />
             </el-form-item>
           </el-form>

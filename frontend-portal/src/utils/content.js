@@ -12,7 +12,7 @@ const SOURCE_TYPE_META = {
   official_blog: { label: '官方博客', description: '适合映射公司、公告链接、发布时间和产品方向。' },
   community: { label: '技术社区', description: '适合映射工程实践、讨论热度和作者链接。' },
   leaderboard: { label: '结构化榜单', description: '适合映射 Arena、HELM、MTEB、SWE-bench 等榜单条目和指标。' },
-  manual: { label: '人工录入', description: '适合第一版演示和人工精选内容。' }
+  manual: { label: '人工录入', description: '适合人工精选、临时记录和自定义来源内容。' }
 }
 
 const EXTRA_FIELD_META = {

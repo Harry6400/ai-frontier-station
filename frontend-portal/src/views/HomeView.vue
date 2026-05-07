@@ -76,16 +76,16 @@ onMounted(loadHome)
 
 <template>
   <div class="portal-shell">
-    <PortalTopbar context-label="Current Stage" context-value="门户高级视觉版" />
+    <PortalTopbar context-label="Personal Workspace" context-value="AI 信息发现与精选" />
 
     <main class="page-stack">
       <section class="hero-grid">
         <section class="section-shell hero-stage">
           <div class="hero-copy-block">
-            <span class="eyebrow-line">AI intelligence portal · stage 6</span>
-            <h1>把课程项目做成一个真正像样的 AI 内容门户，而不是几张后台页面的拼接。</h1>
+            <span class="eyebrow-line">AI intelligence portal · personal workspace</span>
+            <h1>把分散的一手信息整理成一个可持续使用的 AI 内容工作台。</h1>
             <p class="lead-copy">
-              {{ portalStore.projectName }} 当前已经跑通真实数据流，前台开始承担产品形象、
+              {{ portalStore.projectName }} 当前已经跑通真实数据流，前台负责信息发现、
               内容编排和阅读体验，后续可以继续向 GitHub、论文、公司动态与技术实践聚合平台扩展。
             </p>
           </div>
@@ -211,7 +211,7 @@ onMounted(loadHome)
               <span class="section-kicker">Category Map</span>
               <h2>栏目地图</h2>
             </div>
-            <p>当前首页不只展示内容，也清楚告诉老师和用户这个平台未来会如何扩展。</p>
+            <p>当前首页不只展示内容，也清楚呈现这个平台未来会如何扩展。</p>
           </div>
 
           <div class="category-board">

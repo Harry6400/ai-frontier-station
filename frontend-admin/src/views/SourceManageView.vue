@@ -42,7 +42,7 @@ const sourceTypeOptions = [
   {
     value: 'manual',
     label: '人工录入',
-    description: '用于第一版课程演示和人工精选内容。'
+    description: '用于人工精选、临时记录和自定义来源内容。'
   }
 ]
 

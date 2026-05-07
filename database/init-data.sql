@@ -38,7 +38,7 @@ INSERT INTO ai_source (name, slug, source_type, website_url, description, is_ena
 ('arXiv', 'arxiv', 'paper', 'https://arxiv.org', 'AI 科研论文来源', 1),
 ('OpenAI Blog', 'openai-blog', 'official_blog', 'https://openai.com/news', 'OpenAI 官方动态来源', 1),
 ('DeepSeek News', 'deepseek-news', 'official_blog', 'https://www.deepseek.com', 'DeepSeek 官方动态来源', 1),
-('人工录入', 'manual-entry', 'manual', NULL, '当前阶段的人工录入内容来源', 1);
+('人工录入', 'manual-entry', 'manual', NULL, '人工精选、临时记录和自定义来源内容', 1);
 
 INSERT INTO ai_content (
   title, slug, content_type, summary, cover_image, category_id, source_id, source_url,
@@ -60,7 +60,7 @@ INSERT INTO ai_content (
   128,
   6,
   '2026-04-23 20:30:00',
-  '# GitHub 热门 AI 项目观察\n\n这一篇内容用于展示“热门项目”类型的数据结构。\n\n## 这一类内容要承载什么\n\n- 项目定位\n- 核心亮点\n- 适用场景\n- 项目地址\n- 延伸标签\n\n## 为什么第一版先做人工整理\n\n因为当前阶段更重要的是把内容模型、来源模型、标签模型跑通。\n后续接 GitHub 自动采集时，可以直接把仓库数据映射到现有内容结构里。',
+  '# GitHub 热门 AI 项目观察\n\n这一篇内容用于记录“热门项目”类型的信息结构。\n\n## 这一类内容要承载什么\n\n- 项目定位\n- 核心亮点\n- 适用场景\n- 项目地址\n- 延伸标签\n\n## 为什么先做人工整理\n\n因为个人信息工作台更重要的是保证来源可信、摘要可读、标签可筛选。\n后续接 GitHub 自动采集时，可以直接把仓库数据映射到现有内容结构里。',
   JSON_OBJECT('starTrend', 'up', 'externalType', 'github_repo')
 ),
 (

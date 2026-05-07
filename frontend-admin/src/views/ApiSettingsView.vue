@@ -173,8 +173,8 @@ onMounted(loadStatus)
     </div>
 
     <div class="card-panel api-setting-note">
-      <span class="sidebar-kicker">Defense Note</span>
-      <h4>答辩时可以怎么讲</h4>
+      <span class="sidebar-kicker">Key Management Note</span>
+      <h4>密钥安全说明</h4>
       <p>
         API 密钥采用 AES-256-GCM 加密后存储到 MySQL 数据库，主密钥通过环境变量配置。
         前端填写密钥后，后端验证并加密存储，重启后自动加载，无需重复输入。

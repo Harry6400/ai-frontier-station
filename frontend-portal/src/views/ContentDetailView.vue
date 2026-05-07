@@ -127,7 +127,7 @@ watch(() => route.params.id, (id) => loadDetail(id))
               <span class="section-kicker">Reading Context</span>
               <h2>{{ typeMeta.english }}</h2>
               <p>
-                这一页把内容信息、来源关系和正文阅读区拆开，方便课堂展示“内容平台详情页”的结构化设计。
+                这一页把内容信息、来源关系和正文阅读区拆开，帮助你快速判断这条信息是否值得继续阅读。
               </p>
             </div>
           </div>
@@ -259,16 +259,16 @@ watch(() => route.params.id, (id) => loadDetail(id))
             <span class="section-kicker">Why Markdown</span>
             <h3>为什么正文先用 Markdown</h3>
             <p>
-              这种方式更适合课程项目的可解释性，也方便后续接入论文摘要、项目说明、
+              这种方式适合长期维护和快速整理，也方便后续接入论文摘要、项目说明、
               公司动态和技术实践等不同内容来源。
             </p>
           </section>
 
           <section class="section-shell side-note-card">
-            <span class="section-kicker">Defense Angle</span>
-            <h3>答辩时这页可以怎么讲</h3>
+            <span class="section-kicker">Reading Model</span>
+            <h3>这页如何帮助阅读</h3>
             <p>
-              你可以从“信息区、画像区、正文区、扩展字段区”四层去解释详情页分层，这比单纯堆字段更像真正产品。
+              它把“信息概览、来源关系、正文阅读、扩展字段”分开，让你先判断价值，再决定是否深入原文。
             </p>
           </section>
         </aside>

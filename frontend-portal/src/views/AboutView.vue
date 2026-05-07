@@ -23,13 +23,13 @@ const roadmap = [
   '继续扩展专题、热度排序、收藏、周报等产品层能力'
 ]
 
-const defenseAnswers = [
+const designNotes = [
   {
-    question: '为什么这不是普通管理系统？',
+    question: '为什么这不是普通内容收藏夹？',
     answer: '因为它的核心业务是 AI 内容的组织、精选、发布和展示，而不是单纯的信息录入。'
   },
   {
-    question: '为什么数据库要拆出标签和来源？',
+    question: '为什么要拆出标签和来源？',
     answer: '这是为了支持筛选、统计、推荐和后续外部内容同步，而不是把内容写死在一张表里。'
   },
   {
@@ -41,14 +41,14 @@ const defenseAnswers = [
 
 <template>
   <div class="portal-shell">
-    <PortalTopbar context-label="Project Scope" context-value="项目说明与答辩视角" />
+    <PortalTopbar context-label="Project Scope" context-value="产品定位与架构说明" />
 
     <main class="page-stack">
       <section class="section-shell about-hero">
         <span class="eyebrow-line">Project Positioning</span>
         <h1>这个系统的目标，不是做一个普通后台，而是为未来的 AI 信息聚合平台搭出前台与中台的基础结构。</h1>
         <p class="lead-copy">
-          现在它已经是一套可运行、可展示、可答辩的前后端分离系统；以后它还可以继续接入 GitHub 热门项目、
+          现在它已经是一套可运行、可持续维护的前后端分离系统；以后它还可以继续接入 GitHub 热门项目、
           论文摘要、公司动态和技术实践内容源。
         </p>
       </section>
@@ -90,14 +90,14 @@ const defenseAnswers = [
       <section class="section-shell">
         <div class="section-head">
           <div>
-            <span class="section-kicker">Defense Notes</span>
-            <h2>答辩高频问题切口</h2>
+            <span class="section-kicker">Design Notes</span>
+            <h2>为什么这样设计</h2>
           </div>
-          <p>这一部分故意写成“问题 + 回答方向”的形式，帮助你更快把系统讲清楚。</p>
+          <p>这一部分用“问题 + 回答方向”的形式，帮助你更快理解系统为什么这样组织。</p>
         </div>
 
         <div class="answer-grid">
-          <article v-for="item in defenseAnswers" :key="item.question" class="answer-card">
+          <article v-for="item in designNotes" :key="item.question" class="answer-card">
             <h3>{{ item.question }}</h3>
             <p>{{ item.answer }}</p>
           </article>

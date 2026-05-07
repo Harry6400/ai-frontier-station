@@ -87,7 +87,7 @@ async function handleLogin() {
       </el-form>
 
       <div class="login-footer">
-        <p>默认账号：admin / admin123</p>
+        <p>请使用你本地初始化的管理员账号登录。</p>
       </div>
     </div>
 

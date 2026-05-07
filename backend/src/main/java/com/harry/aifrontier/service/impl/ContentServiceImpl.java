@@ -60,6 +60,8 @@ import java.util.stream.Collectors;
 public class ContentServiceImpl implements ContentService {
 
     private static final DateTimeFormatter IMPORT_SLUG_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final int SUMMARY_MAX_LENGTH = 500;
+    private static final int AUTHOR_NAME_MAX_LENGTH = 100;
 
     private final ContentMapper contentMapper;
     private final CategoryMapper categoryMapper;
@@ -420,12 +422,12 @@ public class ContentServiceImpl implements ContentService {
         content.setTitle(request.getTitle().trim());
         content.setSlug(SlugUtil.resolveSlug(request.getSlug(), request.getTitle(), "content"));
         content.setContentType(request.getContentType());
-        content.setSummary(request.getSummary());
+        content.setSummary(limitText(request.getSummary(), SUMMARY_MAX_LENGTH));
         content.setCoverImage(request.getCoverImage());
         content.setCategoryId(request.getCategoryId());
         content.setSourceId(request.getSourceId());
         content.setSourceUrl(request.getSourceUrl());
-        content.setAuthorName(request.getAuthorName());
+        content.setAuthorName(limitText(request.getAuthorName(), AUTHOR_NAME_MAX_LENGTH));
         content.setPublishStatus(request.getPublishStatus());
         content.setFeaturedLevel(request.getFeaturedLevel());
         content.setReadingTime(request.getReadingTime());
@@ -439,6 +441,13 @@ public class ContentServiceImpl implements ContentService {
             return LocalDateTime.now();
         }
         return request.getPublishedAt();
+    }
+
+    private String limitText(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, Math.max(0, maxLength - 1)) + "…";
     }
 
     private void validateAssociations(ContentSaveRequest request) {
