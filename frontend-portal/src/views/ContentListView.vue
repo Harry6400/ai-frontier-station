@@ -10,8 +10,6 @@ const router = useRouter()
 const loading = ref(false)
 const errorMessage = ref('')
 const contents = ref([])
-const categories = ref([])
-const sources = ref([])
 const tags = ref([])
 const pagination = reactive({
   pageNum: 1,
@@ -21,8 +19,6 @@ const pagination = reactive({
 const filters = reactive({
   keyword: '',
   contentType: '',
-  categoryId: '',
-  sourceId: '',
   tagId: '',
   sortBy: 'latest'
 })
@@ -44,12 +40,6 @@ const sortOptions = [
 const typeLabelMap = Object.fromEntries(typeOptions.map((item) => [item.value, item.label]))
 const sortLabelMap = Object.fromEntries(sortOptions.map((item) => [item.value, item.label]))
 
-const selectedCategory = computed(() =>
-  categories.value.find((item) => String(item.id) === String(filters.categoryId))
-)
-const selectedSource = computed(() =>
-  sources.value.find((item) => String(item.id) === String(filters.sourceId))
-)
 const selectedTag = computed(() =>
   tags.value.find((item) => String(item.id) === String(filters.tagId))
 )
@@ -64,12 +54,6 @@ const activeFilters = computed(() => {
   }
   if (filters.contentType) {
     chips.push({ key: 'contentType', label: `类型：${typeLabelMap[filters.contentType]}` })
-  }
-  if (selectedCategory.value) {
-    chips.push({ key: 'categoryId', label: `分类：${selectedCategory.value.name}` })
-  }
-  if (selectedSource.value) {
-    chips.push({ key: 'sourceId', label: `来源：${selectedSource.value.name}` })
   }
   if (selectedTag.value) {
     chips.push({ key: 'tagId', label: `标签：${selectedTag.value.name}` })
@@ -104,8 +88,8 @@ const emptyStateHint = computed(() => {
   if (filters.tagId) {
     return '当前标签下内容较少，可以移除标签或切换到 GitHub、RAG、Agent 等其他标签。'
   }
-  if (filters.categoryId || filters.contentType || filters.sourceId) {
-    return '可以放宽分类、类型或来源条件，查看更大的内容集合。'
+  if (filters.contentType) {
+    return '可以放宽类型条件，查看更大的内容集合。'
   }
   return '当前还没有公开内容，可以先去后台发布一条内容。'
 })
@@ -117,8 +101,6 @@ function normalizeSort(value) {
 function readStateFromQuery() {
   filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
   filters.contentType = typeof route.query.contentType === 'string' ? route.query.contentType : ''
-  filters.categoryId = typeof route.query.categoryId === 'string' ? route.query.categoryId : ''
-  filters.sourceId = typeof route.query.sourceId === 'string' ? route.query.sourceId : ''
   filters.tagId = typeof route.query.tagId === 'string' ? route.query.tagId : ''
   filters.sortBy = normalizeSort(typeof route.query.sortBy === 'string' ? route.query.sortBy : 'latest')
   const pageNum = Number(route.query.pageNum || 1)
@@ -132,12 +114,6 @@ function buildQuery() {
   }
   if (filters.contentType) {
     query.contentType = filters.contentType
-  }
-  if (filters.categoryId) {
-    query.categoryId = filters.categoryId
-  }
-  if (filters.sourceId) {
-    query.sourceId = filters.sourceId
   }
   if (filters.tagId) {
     query.tagId = filters.tagId
@@ -157,8 +133,6 @@ function syncQuery() {
 
 async function loadFilterOptions() {
   const res = await getPortalHome()
-  categories.value = res.data.categories || []
-  sources.value = res.data.sources || []
   tags.value = res.data.tags || []
 }
 
@@ -171,8 +145,6 @@ async function loadContents() {
       pageSize: pagination.pageSize,
       keyword: filters.keyword.trim() || undefined,
       contentType: filters.contentType || undefined,
-      categoryId: filters.categoryId || undefined,
-      sourceId: filters.sourceId || undefined,
       tagId: filters.tagId || undefined,
       sortBy: filters.sortBy || 'latest'
     })
@@ -193,8 +165,6 @@ function search() {
 function clearFilters() {
   filters.keyword = ''
   filters.contentType = ''
-  filters.categoryId = ''
-  filters.sourceId = ''
   filters.tagId = ''
   filters.sortBy = 'latest'
   pagination.pageNum = 1
@@ -260,95 +230,72 @@ onMounted(initialize)
     <PortalTopbar context-label="Result Set" :context-value="`${pagination.total} 条内容`" />
 
     <main class="page-stack">
-      <section class="filter-stage">
-        <section class="section-shell filter-hero">
-          <span class="eyebrow-line">Search & Browse</span>
-          <h1>内容广场</h1>
-          <p class="lead-copy">
-            这里已经接入真实已发布内容，可以按标题、类型、分类、来源和标签筛选。排序和筛选条件会同步到地址栏，
-            刷新页面后仍能保持当前检索状态。
-          </p>
-        </section>
+      <section class="section-shell filter-rack-panel filter-rack-panel--compact">
+        <div class="section-head section-head--tight">
+          <div>
+            <span class="section-kicker">Browse</span>
+            <h1>内容广场</h1>
+          </div>
+          <span class="micro-note">
+            {{ hasActiveFilters ? `已启用 ${activeFilters.length} 个条件` : '按关键词、类型和标签找内容' }}
+          </span>
+        </div>
 
-        <section class="section-shell filter-rack-panel">
-          <div class="section-head section-head--tight">
-            <div>
-              <span class="section-kicker">Filters</span>
-              <h2>筛选条件</h2>
-            </div>
-            <span class="micro-note">
-              {{ hasActiveFilters ? `已启用 ${activeFilters.length} 个筛选条件` : '前台检索入口' }}
-            </span>
+        <div class="filter-rack">
+          <input
+            v-model="filters.keyword"
+            class="filter-input"
+            placeholder="搜索标题关键词"
+            @keyup.enter="search"
+          />
+
+          <div class="filter-field-row filter-field-row--compact">
+            <select v-model="filters.contentType" class="filter-select">
+              <option value="">全部类型</option>
+              <option v-for="item in typeOptions" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </option>
+            </select>
+            <select v-model="filters.sortBy" class="filter-select" @change="changeSort">
+              <option v-for="item in sortOptions" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </option>
+            </select>
           </div>
 
-          <div class="filter-rack">
-            <input
-              v-model="filters.keyword"
-              class="filter-input"
-              placeholder="搜索标题关键词"
-              @keyup.enter="search"
-            />
-
-            <div class="filter-field-row filter-field-row--four">
-              <select v-model="filters.contentType" class="filter-select">
-                <option value="">全部类型</option>
-                <option v-for="item in typeOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
-              <select v-model="filters.categoryId" class="filter-select">
-                <option value="">全部分类</option>
-                <option v-for="item in categories" :key="item.id" :value="item.id">
-                  {{ item.name }}
-                </option>
-              </select>
-              <select v-model="filters.sourceId" class="filter-select">
-                <option value="">全部来源</option>
-                <option v-for="item in sources" :key="item.id" :value="item.id">
-                  {{ item.name }}
-                </option>
-              </select>
-              <select v-model="filters.sortBy" class="filter-select" @change="changeSort">
-                <option v-for="item in sortOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
-            </div>
-
-            <div v-if="quickTags.length" class="quick-tag-panel">
-              <span class="micro-note">热门标签</span>
-              <button
-                v-for="tag in quickTags"
-                :key="tag.id"
-                type="button"
-                class="quick-tag-chip"
-                :class="{ 'is-active': String(filters.tagId) === String(tag.id) }"
-                @click="selectTag(tag.id)"
-              >
-                {{ tag.name }}
-              </button>
-            </div>
-
-            <div class="filter-action-row">
-              <button class="primary-btn" @click="search">查询</button>
-              <button class="secondary-btn" @click="clearFilters">清空</button>
-              <span class="micro-note">当前排序：{{ currentSortLabel }}</span>
-            </div>
-          </div>
-
-          <div v-if="hasActiveFilters" class="active-filter-bar">
-            <span class="micro-note">当前条件</span>
+          <div v-if="quickTags.length" class="quick-tag-panel">
+            <span class="micro-note">热门标签</span>
             <button
-              v-for="item in activeFilters"
-              :key="item.key"
+              v-for="tag in quickTags"
+              :key="tag.id"
               type="button"
-              class="active-filter-chip"
-              @click="removeFilter(item.key)"
+              class="quick-tag-chip"
+              :class="{ 'is-active': String(filters.tagId) === String(tag.id) }"
+              @click="selectTag(tag.id)"
             >
-              {{ item.label }} ×
+              {{ tag.name }}
             </button>
           </div>
-        </section>
+
+          <div class="filter-action-row">
+            <button class="primary-btn" @click="search">查询</button>
+            <button class="secondary-btn" @click="clearFilters">清空</button>
+            <span class="micro-note">当前排序：{{ currentSortLabel }}</span>
+          </div>
+        </div>
+
+        <div v-if="hasActiveFilters" class="active-filter-bar">
+          <span class="micro-note">当前条件</span>
+          <button
+            v-for="item in activeFilters"
+            :key="item.key"
+            type="button"
+            class="active-filter-chip"
+            @click="removeFilter(item.key)"
+          >
+            {{ item.label }} ×
+          </button>
+        </div>
       </section>
 
       <section v-if="loading || errorMessage" class="section-shell">
@@ -358,11 +305,11 @@ onMounted(initialize)
         </div>
       </section>
 
-      <section class="section-shell">
+      <section class="section-shell result-section">
         <div class="results-strip">
           <div>
-            <span class="section-kicker">Result View</span>
-            <h2>当前检索结果</h2>
+            <span class="section-kicker">Results</span>
+            <h2>检索结果</h2>
           </div>
           <div class="results-summary">
             <strong>{{ resultSummary }}</strong>

@@ -405,6 +405,14 @@ img {
   isolation: isolate;
 }
 
+.hero-stage--compact {
+  min-height: auto;
+}
+
+.hero-stage--compact h1 {
+  max-width: 18ch;
+}
+
 .hero-stage::before,
 .hero-stage::after {
   content: "";
@@ -975,6 +983,25 @@ img {
 
 .filter-field-row--four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.filter-field-row--compact {
+  grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 0.8fr);
+}
+
+.filter-rack-panel--compact {
+  padding: 26px;
+}
+
+.filter-rack-panel--compact h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.result-section {
+  margin-top: -4px;
 }
 
 .quick-tag-panel {
