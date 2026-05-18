@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 前沿情报站 — 首页重设计方案</title>
+<style>
+:root {
+  --font-body: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-display: "SF Pro Display", "Avenir Next", "PingFang SC", sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", monospace;
+  --accent: #2563EB;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --text: #151a24;
+  --text-2: #566072;
+  --text-3: #8490a3;
+  --bg: #f6f7f3;
+  --surface: #ffffff;
+  --line: rgba(17, 24, 39, 0.09);
+  --line-s: rgba(17, 24, 39, 0.18);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+/* === VARIANT SWITCHER === */
+.variant-switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; gap: 0; background: #111; padding: 0;
+  border-bottom: 1px solid #333;
+}
+.variant-switcher button {
+  flex: 1; padding: 14px 20px; border: none; background: transparent;
+  color: #888; font: 600 14px/1 var(--font-body); cursor: pointer;
+  transition: all 0.2s; letter-spacing: 0.02em;
+}
+.variant-switcher button:hover { color: #ccc; }
+.variant-switcher button.active { color: #fff; background: #222; border-bottom: 2px solid var(--accent); }
+
+.variant-panel { display: none; padding-top: 48px; }
+.variant-panel.active { display: block; }
+
+/* Shared: Sticky Topbar */
+.sticky-topbar {
+  position: sticky; top: 48px; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 56px;
+  background: rgba(255,255,255,0.88); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.sticky-topbar .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+.sticky-topbar .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.sticky-topbar nav { display: flex; gap: 4px; }
+.sticky-topbar nav a {
+  padding: 8px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 550;
+  color: var(--text-3); text-decoration: none; transition: all 0.15s;
+}
+.sticky-topbar nav a:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+.sticky-topbar nav a.active { color: var(--text); background: var(--surface); box-shadow: var(--shadow); }
+.sticky-topbar .side { display: flex; align-items: center; gap: 10px; }
+.sticky-topbar .search-box {
+  width: 180px; height: 34px; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: rgba(0,0,0,0.02); font-size: 13px; font-family: inherit;
+  color: var(--text); outline: none; transition: all 0.2s;
+}
+.sticky-topbar .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); width: 220px; }
+.sticky-topbar .theme-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
+  background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-2); transition: all 0.15s;
+}
+.sticky-topbar .theme-btn:hover { border-color: var(--line-s); }
+
+/* === VARIANT A: Editorial Minimal === */
+.va-container { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+
+.va-hero {
+  padding: 80px 0 60px;
+  border-bottom: 1px solid var(--line);
+}
+.va-hero .eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 20px;
+}
+.va-hero h1 {
+  font-family: var(--font-display); font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 750; line-height: 1.08; letter-spacing: -0.045em;
+  max-width: 18ch; margin-bottom: 20px;
+}
+.va-hero .lead { font-size: 1.05rem; color: var(--text-2); max-width: 52ch; line-height: 1.75; margin-bottom: 32px; }
+.va-hero .stats { display: flex; gap: 40px; }
+.va-hero .stat-item span { display: block; font-size: 12px; color: var(--text-3); font-weight: 500; margin-bottom: 4px; }
+.va-hero .stat-item strong { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
+
+.va-section { padding: 48px 0; }
+.va-section + .va-section { border-top: 1px solid var(--line); }
+.va-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; }
+.va-section-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+.va-section-head .count { font-size: 13px; color: var(--text-3); }
+
+/* Section Nav Cards */
+.va-nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.va-nav-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface);
+  text-decoration: none; color: var(--text); transition: all 0.2s;
+}
+.va-nav-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(37,99,235,0.08); transform: translateY(-1px); }
+.va-nav-card .icon { font-size: 1.6rem; flex-shrink: 0; }
+.va-nav-card .info strong { display: block; font-size: 14px; font-weight: 650; margin-bottom: 2px; }
+.va-nav-card .info p { font-size: 12.5px; color: var(--text-3); margin: 0; }
+.va-nav-card .badge {
+  margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); padding: 3px 10px; border-radius: 999px; flex-shrink: 0;
+}
+
+/* Signal / Featured */
+.va-featured-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.va-featured-card {
+  padding: 24px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface);
+  transition: all 0.2s; text-decoration: none; color: var(--text); display: block;
+}
+.va-featured-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.va-featured-card.hero-card { grid-column: 1 / -1; padding: 32px; }
+.va-featured-card .chip { font-size: 11px; font-weight: 650; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+.va-featured-card h3 { font-size: 17px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; letter-spacing: -0.01em; }
+.va-featured-card.hero-card h3 { font-size: 22px; }
+.va-featured-card p { font-size: 14px; color: var(--text-2); line-height: 1.65; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.va-featured-card .meta { font-size: 12px; color: var(--text-3); }
+
+/* Latest list */
+.va-latest-list { display: grid; gap: 0; }
+.va-latest-item {
+  display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 16px;
+  padding: 16px 0; border-bottom: 1px solid var(--line);
+  text-decoration: none; color: var(--text); transition: all 0.15s;
+}
+.va-latest-item:hover { background: rgba(0,0,0,0.01); }
+.va-latest-item .idx { font-size: 13px; font-weight: 600; color: var(--text-3); font-family: var(--font-mono); text-align: center; }
+.va-latest-item .content strong { font-size: 14.5px; font-weight: 600; display: block; margin-bottom: 3px; }
+.va-latest-item .content span { font-size: 12.5px; color: var(--text-3); }
+.va-latest-item .time { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+
+/* Sources */
+.va-sources { display: flex; gap: 8px; flex-wrap: wrap; }
+.va-source-pill {
+  padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 550;
+  border: 1px solid var(--line); color: var(--text-2); background: var(--surface);
+}
+
+/* === VARIANT B: Dashboard Grid === */
+.vb-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 104px); }
+
+.vb-sidebar {
+  padding: 28px 20px; border-right: 1px solid var(--line);
+  background: rgba(255,255,255,0.6); position: sticky; top: 104px; height: calc(100vh - 104px);
+  overflow-y: auto; display: flex; flex-direction: column; gap: 24px;
+}
+.vb-sidebar .sb-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+.vb-sidebar .sb-nav { display: grid; gap: 2px; }
+.vb-sidebar .sb-nav a {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: 8px; font-size: 13.5px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: all 0.15s;
+}
+.vb-sidebar .sb-nav a:hover { background: rgba(0,0,0,0.03); color: var(--text); }
+.vb-sidebar .sb-nav a.active { background: var(--surface); box-shadow: var(--shadow); color: var(--text); font-weight: 600; }
+.vb-sidebar .sb-nav a .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line-s); flex-shrink: 0; }
+.vb-sidebar .sb-nav a.active .dot { background: var(--accent); }
+
+.vb-main { padding: 32px 40px; }
+
+.vb-hero-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
+.vb-stat-card {
+  padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--surface);
+}
+.vb-stat-card .label { font-size: 12px; color: var(--text-3); font-weight: 500; margin-bottom: 6px; }
+.vb-stat-card .value { font-size: 26px; font-weight: 750; letter-spacing: -0.03em; }
+.vb-stat-card .note { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+
+.vb-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.vb-panel {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); overflow: hidden;
+}
+.vb-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--line);
+}
+.vb-panel-head h3 { font-size: 14px; font-weight: 650; }
+.vb-panel-head .tag { font-size: 11px; color: var(--text-3); padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,0.03); }
+.vb-panel-body { padding: 16px 20px; }
+
+.vb-nav-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.vb-nav-chip {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--surface); text-decoration: none; color: var(--text);
+  transition: all 0.2s;
+}
+.vb-nav-chip:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(37,99,235,0.06); }
+.vb-nav-chip .emoji { font-size: 1.3rem; }
+.vb-nav-chip strong { font-size: 13px; font-weight: 600; }
+.vb-nav-chip p { font-size: 11.5px; color: var(--text-3); margin: 2px 0 0; }
+.vb-nav-chip .num { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); }
+
+.vb-item-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--line); text-decoration: none; color: var(--text);
+}
+.vb-item-row:last-child { border-bottom: none; }
+.vb-item-row .chip { font-size: 10px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 6px; }
+.vb-item-row strong { font-size: 13.5px; font-weight: 550; flex: 1; }
+.vb-item-row .date { font-size: 12px; color: var(--text-3); }
+
+/* === VARIANT C: Magazine Split === */
+.vc-container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+
+.vc-hero-split { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 64px 0 56px; align-items: center; }
+.vc-hero-left .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.vc-hero-left h1 {
+  font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-weight: 750; line-height: 1.1; letter-spacing: -0.04em; margin-bottom: 16px;
+}
+.vc-hero-left .lead { font-size: 1rem; color: var(--text-2); line-height: 1.7; margin-bottom: 24px; }
+.vc-hero-left .stats-row { display: flex; gap: 32px; }
+.vc-hero-left .stat-item span { display: block; font-size: 11px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+.vc-hero-left .stat-item strong { font-size: 24px; font-weight: 750; letter-spacing: -0.02em; }
+
+.vc-hero-right { display: grid; gap: 10px; }
+.vc-hero-right .mini-card {
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface);
+  text-decoration: none; color: var(--text); transition: all 0.2s;
+}
+.vc-hero-right .mini-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.06); transform: translateX(4px); }
+.vc-hero-right .mini-card .tag { font-size: 10px; font-weight: 650; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+.vc-hero-right .mini-card strong { font-size: 14px; font-weight: 600; }
+.vc-hero-right .mini-card .date { font-size: 12px; color: var(--text-3); margin-left: auto; }
+
+.vc-divider { border: none; border-top: 1px solid var(--line); margin: 0; }
+
+.vc-section { padding: 48px 0; }
+.vc-section + .vc-section { border-top: 1px solid var(--line); }
+.vc-section-bar { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+.vc-section-bar h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.vc-section-bar .more { font-size: 13px; color: var(--accent); font-weight: 550; text-decoration: none; }
+
+/* Mag nav cards */
+.vc-nav-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.vc-nav-pill {
+  text-align: center; padding: 20px 10px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface);
+  text-decoration: none; color: var(--text); transition: all 0.2s;
+}
+.vc-nav-pill:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(37,99,235,0.06); }
+.vc-nav-pill .icon { font-size: 1.5rem; margin-bottom: 8px; }
+.vc-nav-pill strong { display: block; font-size: 13px; font-weight: 650; margin-bottom: 3px; }
+.vc-nav-pill span { font-size: 11.5px; color: var(--text-3); }
+
+/* Mag featured: asymmetric */
+.vc-feat-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.vc-feat-card {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  overflow: hidden; text-decoration: none; color: var(--text); transition: all 0.2s; display: block;
+}
+.vc-feat-card:hover { box-shadow: 0 12px 36px rgba(0,0,0,0.08); transform: translateY(-3px); }
+.vc-feat-card .pad { padding: 24px; }
+.vc-feat-card.big .pad { padding: 32px; }
+.vc-feat-card .chip { font-size: 10.5px; font-weight: 650; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+.vc-feat-card h3 { font-size: 16px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+.vc-feat-card.big h3 { font-size: 20px; }
+.vc-feat-card p { font-size: 13.5px; color: var(--text-2); line-height: 1.65; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.vc-feat-card .meta { font-size: 12px; color: var(--text-3); }
+
+/* Mag latest: horizontal scroll row */
+.vc-latest-scroll { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+.vc-latest-scroll::-webkit-scrollbar { height: 4px; }
+.vc-latest-scroll::-webkit-scrollbar-thumb { background: var(--line-s); border-radius: 2px; }
+.vc-latest-card {
+  flex: 0 0 280px; padding: 20px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface);
+  text-decoration: none; color: var(--text); transition: all 0.2s;
+}
+.vc-latest-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+.vc-latest-card .chip { font-size: 10px; font-weight: 600; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+.vc-latest-card strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vc-latest-card .date { font-size: 12px; color: var(--text-3); }
+
+/* Footer */
+.va-footer, .vb-footer, .vc-footer {
+  padding: 32px 0; border-top: 1px solid var(--line);
+  text-align: center; font-size: 12.5px; color: var(--text-3);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .va-nav-grid { grid-template-columns: repeat(2, 1fr); }
+  .va-featured-grid { grid-template-columns: 1fr; }
+  .vb-layout { grid-template-columns: 1fr; }
+  .vb-sidebar { display: none; }
+  .vb-hero-row { grid-template-columns: repeat(2, 1fr); }
+  .vb-grid-2 { grid-template-columns: 1fr; }
+  .vb-nav-chips { grid-template-columns: repeat(2, 1fr); }
+  .vc-hero-split { grid-template-columns: 1fr; }
+  .vc-nav-strip { grid-template-columns: repeat(3, 1fr); }
+  .vc-feat-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .va-nav-grid { grid-template-columns: 1fr; }
+  .sticky-topbar { padding: 0 16px; }
+  .sticky-topbar nav { display: none; }
+  .vb-hero-row { grid-template-columns: 1fr; }
+  .vc-nav-strip { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- Variant Switcher -->
+<div class="variant-switcher">
+  <button class="active" onclick="switchVariant('a')">方案 A · 编辑极简</button>
+  <button onclick="switchVariant('b')">方案 B · 仪表盘网格</button>
+  <button onclick="switchVariant('c')">方案 C · 杂志分栏</button>
+</div>
+
+<!-- ========== VARIANT A ========== -->
+<div id="variant-a" class="variant-panel active">
+  <header class="sticky-topbar">
+    <div class="brand"><span class="brand-dot"></span>AI 前沿情报站</div>
+    <nav>
+      <a href="#" class="active">首页</a>
+      <a href="#">论文</a>
+      <a href="#">GitHub</a>
+      <a href="#">AI 资讯</a>
+      <a href="#">公司动态</a>
+      <a href="#">工具实践</a>
+    </nav>
+    <div class="side">
+      <input class="search-box" type="text" placeholder="搜索内容...">
+      <button class="theme-btn">🌙</button>
+    </div>
+  </header>
+
+  <div class="va-container">
+    <section class="va-hero">
+      <div class="eyebrow">AI Frontier Intelligence Platform</div>
+      <h1>追踪前沿论文、开源项目与技术动态</h1>
+      <p class="lead">已接入 GitHub、arXiv、HuggingFace 等多源数据，聚合论文、项目与技术动态，持续内化为中文精选。</p>
+      <div class="stats">
+        <div class="stat-item"><span>已收录</span><strong>71</strong></div>
+        <div class="stat-item"><span>数据源</span><strong>6</strong></div>
+        <div class="stat-item"><span>板块</span><strong>6</strong></div>
+      </div>
+    </section>
+
+    <section class="va-section">
+      <div class="va-section-head">
+        <h2>板块导航</h2>
+        <span class="count">6 个板块</span>
+      </div>
+      <div class="va-nav-grid">
+        <a href="#" class="va-nav-card"><span class="icon">📄</span><div class="info"><strong>论文速递</strong><p>arXiv、顶会论文解读</p></div><span class="badge">63 篇</span></a>
+        <a href="#" class="va-nav-card"><span class="icon">🐙</span><div class="info"><strong>GitHub 开源</strong><p>值得关注的开源仓库</p></div><span class="badge">3 个</span></a>
+        <a href="#" class="va-nav-card"><span class="icon">📰</span><div class="info"><strong>AI 资讯</strong><p>行业新闻与深度报道</p></div><span class="badge">—</span></a>
+        <a href="#" class="va-nav-card"><span class="icon">🏢</span><div class="info"><strong>公司动态</strong><p>大厂 AI 战略与产品</p></div><span class="badge">1 条</span></a>
+        <a href="#" class="va-nav-card"><span class="icon">🏆</span><div class="info"><strong>Arena 评测</strong><p>模型能力对比与基准</p></div><span class="badge" style="color:var(--text-3)">敬请期待</span></a>
+        <a href="#" class="va-nav-card"><span class="icon">🔧</span><div class="info"><strong>工具实践</strong><p>实用工具与落地经验</p></div><span class="badge">4 篇</span></a>
+      </div>
+    </section>
+
+    <section class="va-section">
+      <div class="va-section-head">
+        <h2>精选内容</h2>
+        <span class="count">由后台精选级别控制</span>
+      </div>
+      <div class="va-featured-grid">
+        <a href="#" class="va-featured-card hero-card">
+          <div class="chip">论文 · arXiv</div>
+          <h3>低剂量 CT 去噪的最新扩散模型方法综述</h3>
+          <p>本文系统综述了扩散模型在低剂量 CT 去噪中的应用，覆盖 DDPM、Score-based 和 Latent Diffusion 三大范式，对比了 PSNR/SSIM 指标和临床可用性。</p>
+          <div class="meta">2026-05-17 · 医学影像 · 10 分钟阅读</div>
+        </a>
+        <a href="#" class="va-featured-card">
+          <div class="chip">项目 · GitHub</div>
+          <h3>LangChain Agent 工程实践</h3>
+          <p>从 Demo 到稳定系统需要补哪些能力？工具调用、记忆管理和错误恢复的工程化方案。</p>
+          <div class="meta">2026-05-15 · Agent</div>
+        </a>
+        <a href="#" class="va-featured-card">
+          <div class="chip">实践</div>
+          <h3>RAG 系统的分块策略对比</h3>
+          <p>固定长度、语义分块、递归分块三种方案在不同场景下的召回率和延迟对比。</p>
+          <div class="meta">2026-05-14 · RAG</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="va-section">
+      <div class="va-section-head">
+        <h2>最新入库</h2>
+        <span class="count">按时间倒序</span>
+      </div>
+      <div class="va-latest-list">
+        <a href="#" class="va-latest-item"><span class="idx">01</span><div class="content"><strong>Denoising Interferometric Observations Using VIREO</strong><span>论文 · arXiv</span></div><span class="time">05-17</span></a>
+        <a href="#" class="va-latest-item"><span class="idx">02</span><div class="content"><strong>Compositional Video Generation via CVG</strong><span>论文 · arXiv</span></div><span class="time">05-17</span></a>
+        <a href="#" class="va-latest-item"><span class="idx">03</span><div class="content"><strong>Predicting Chemotherapy Response from CT Baseline</strong><span>论文 · arXiv</span></div><span class="time">05-17</span></a>
+        <a href="#" class="va-latest-item"><span class="idx">04</span><div class="content"><strong>SANA-WM: 高效分钟级世界模型</strong><span>论文 · arXiv</span></div><span class="time">05-17</span></a>
+        <a href="#" class="va-latest-item"><span class="idx">05</span><div class="content"><strong>Pelican-Unified 1.0: 统一具身智能模型</strong><span>论文 · arXiv</span></div><span class="time">05-17</span></a>
+      </div>
+    </section>
+
+    <section class="va-section">
+      <div class="va-section-head"><h2>数据来源</h2></div>
+      <div class="va-sources">
+        <span class="va-source-pill">GitHub Trending</span>
+        <span class="va-source-pill">arXiv</span>
+        <span class="va-source-pill">HuggingFace</span>
+        <span class="va-source-pill">OpenAI Blog</span>
+        <span class="va-source-pill">DeepSeek</span>
+      </div>
+    </section>
+
+    <footer class="va-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+  </div>
+</div>
+
+<!-- ========== VARIANT B ========== -->
+<div id="variant-b" class="variant-panel">
+  <header class="sticky-topbar">
+    <div class="brand"><span class="brand-dot"></span>AI 前沿情报站</div>
+    <nav>
+      <a href="#" class="active">首页</a>
+      <a href="#">论文</a>
+      <a href="#">GitHub</a>
+      <a href="#">AI 资讯</a>
+      <a href="#">公司动态</a>
+      <a href="#">工具实践</a>
+    </nav>
+    <div class="side">
+      <input class="search-box" type="text" placeholder="搜索内容...">
+      <button class="theme-btn">🌙</button>
+    </div>
+  </header>
+
+  <div class="vb-layout">
+    <aside class="vb-sidebar">
+      <div>
+        <div class="sb-section-title">板块</div>
+        <nav class="sb-nav">
+          <a href="#" class="active"><span class="dot"></span>论文速递 <span style="margin-left:auto;font-size:12px;color:var(--text-3)">63</span></a>
+          <a href="#"><span class="dot"></span>GitHub 开源 <span style="margin-left:auto;font-size:12px;color:var(--text-3)">3</span></a>
+          <a href="#"><span class="dot"></span>AI 资讯</a>
+          <a href="#"><span class="dot"></span>公司动态 <span style="margin-left:auto;font-size:12px;color:var(--text-3)">1</span></a>
+          <a href="#"><span class="dot"></span>Arena 评测</a>
+          <a href="#"><span class="dot"></span>工具实践 <span style="margin-left:auto;font-size:12px;color:var(--text-3)">4</span></a>
+        </nav>
+      </div>
+      <div>
+        <div class="sb-section-title">来源</div>
+        <nav class="sb-nav">
+          <a href="#"><span class="dot"></span>GitHub Trending</a>
+          <a href="#"><span class="dot"></span>arXiv</a>
+          <a href="#"><span class="dot"></span>HuggingFace</a>
+          <a href="#"><span class="dot"></span>OpenAI Blog</a>
+          <a href="#"><span class="dot"></span>DeepSeek</a>
+        </nav>
+      </div>
+    </aside>
+
+    <main class="vb-main">
+      <div class="vb-hero-row">
+        <div class="vb-stat-card"><div class="label">已收录</div><div class="value">71</div><div class="note">全部内容</div></div>
+        <div class="vb-stat-card"><div class="label">论文</div><div class="value">63</div><div class="note">arXiv + HuggingFace</div></div>
+        <div class="vb-stat-card"><div class="label">项目</div><div class="value">3</div><div class="note">GitHub 导入</div></div>
+        <div class="vb-stat-card"><div class="label">数据源</div><div class="value">6</div><div class="note">多源聚合</div></div>
+      </div>
+
+      <div class="vb-grid-2">
+        <div class="vb-panel">
+          <div class="vb-panel-head"><h3>板块导航</h3><span class="tag">6 板块</span></div>
+          <div class="vb-panel-body">
+            <div class="vb-nav-chips">
+              <a href="#" class="vb-nav-chip"><span class="emoji">📄</span><div><strong>论文速递</strong><p>arXiv 论文</p></div><span class="num">63</span></a>
+              <a href="#" class="vb-nav-chip"><span class="emoji">🐙</span><div><strong>GitHub</strong><p>开源仓库</p></div><span class="num">3</span></a>
+              <a href="#" class="vb-nav-chip"><span class="emoji">📰</span><div><strong>AI 资讯</strong><p>行业新闻</p></div></a>
+              <a href="#" class="vb-nav-chip"><span class="emoji">🏢</span><div><strong>公司动态</strong><p>战略产品</p></div><span class="num">1</span></a>
+              <a href="#" class="vb-nav-chip"><span class="emoji">🏆</span><div><strong>Arena</strong><p>模型评测</p></div></a>
+              <a href="#" class="vb-nav-chip"><span class="emoji">🔧</span><div><strong>工具</strong><p>最佳实践</p></div><span class="num">4</span></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="vb-panel">
+          <div class="vb-panel-head"><h3>精选内容</h3><span class="tag">Top 4</span></div>
+          <div class="vb-panel-body">
+            <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>低剂量 CT 去噪扩散模型综述</strong><span class="date">05-17</span></a>
+            <a href="#" class="vb-item-row"><span class="chip">项目</span><strong>LangChain Agent 工程实践</strong><span class="date">05-15</span></a>
+            <a href="#" class="vb-item-row"><span class="chip">实践</span><strong>RAG 分块策略对比</strong><span class="date">05-14</span></a>
+            <a href="#" class="vb-item-row"><span class="chip">资讯</span><strong>OpenAI GPT-5 发布时间线</strong><span class="date">05-12</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="vb-panel">
+        <div class="vb-panel-head"><h3>最新入库</h3><span class="tag">最近 5 条</span></div>
+        <div class="vb-panel-body">
+          <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>Denoising Interferometric Observations Using VIREO</strong><span class="date">05-17</span></a>
+          <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>Compositional Video Generation via CVG</strong><span class="date">05-17</span></a>
+          <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>Predicting Chemotherapy Response from CT</strong><span class="date">05-17</span></a>
+          <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>SANA-WM: 高效分钟级世界模型</strong><span class="date">05-17</span></a>
+          <a href="#" class="vb-item-row"><span class="chip">论文</span><strong>Pelican-Unified 1.0 统一具身智能</strong><span class="date">05-17</span></a>
+        </div>
+      </div>
+
+      <footer class="vb-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+    </main>
+  </div>
+</div>
+
+<!-- ========== VARIANT C ========== -->
+<div id="variant-c" class="variant-panel">
+  <header class="sticky-topbar">
+    <div class="brand"><span class="brand-dot"></span>AI 前沿情报站</div>
+    <nav>
+      <a href="#" class="active">首页</a>
+      <a href="#">论文</a>
+      <a href="#">GitHub</a>
+      <a href="#">AI 资讯</a>
+      <a href="#">公司动态</a>
+      <a href="#">工具实践</a>
+    </nav>
+    <div class="side">
+      <input class="search-box" type="text" placeholder="搜索内容...">
+      <button class="theme-btn">🌙</button>
+    </div>
+  </header>
+
+  <div class="vc-container">
+    <section class="vc-hero-split">
+      <div class="vc-hero-left">
+        <div class="eyebrow">AI Frontier Intelligence Platform</div>
+        <h1>追踪前沿论文、开源项目与技术动态</h1>
+        <p class="lead">已接入 GitHub、arXiv、HuggingFace 等多源数据，聚合论文、项目与技术动态。</p>
+        <div class="stats-row">
+          <div class="stat-item"><span>收录</span><strong>71</strong></div>
+          <div class="stat-item"><span>来源</span><strong>6</strong></div>
+          <div class="stat-item"><span>板块</span><strong>6</strong></div>
+        </div>
+      </div>
+      <div class="vc-hero-right">
+        <a href="#" class="mini-card"><div><div class="tag">论文</div><strong>Denoising Interferometric Observations</strong></div><span class="date">05-17</span></a>
+        <a href="#" class="mini-card"><div><div class="tag">项目</div><strong>LangChain Agent 工程实践</strong></div><span class="date">05-15</span></a>
+        <a href="#" class="mini-card"><div><div class="tag">实践</div><strong>RAG 分块策略对比</strong></div><span class="date">05-14</span></a>
+        <a href="#" class="mini-card"><div><div class="tag">论文</div><strong>SANA-WM 高效世界模型</strong></div><span class="date">05-17</span></a>
+      </div>
+    </section>
+
+    <hr class="vc-divider">
+
+    <section class="vc-section">
+      <div class="vc-section-bar">
+        <h2>板块导航</h2>
+      </div>
+      <div class="vc-nav-strip">
+        <a href="#" class="vc-nav-pill"><div class="icon">📄</div><strong>论文速递</strong><span>63 篇</span></a>
+        <a href="#" class="vc-nav-pill"><div class="icon">🐙</div><strong>GitHub</strong><span>3 个</span></a>
+        <a href="#" class="vc-nav-pill"><div class="icon">📰</div><strong>AI 资讯</strong><span>—</span></a>
+        <a href="#" class="vc-nav-pill"><div class="icon">🏢</div><strong>公司动态</strong><span>1 条</span></a>
+        <a href="#" class="vc-nav-pill"><div class="icon">🏆</div><strong>Arena</strong><span>敬请期待</span></a>
+        <a href="#" class="vc-nav-pill"><div class="icon">🔧</div><strong>工具</strong><span>4 篇</span></a>
+      </div>
+    </section>
+
+    <hr class="vc-divider">
+
+    <section class="vc-section">
+      <div class="vc-section-bar">
+        <h2>精选内容</h2>
+        <a href="#" class="more">查看全部 →</a>
+      </div>
+      <div class="vc-feat-grid">
+        <a href="#" class="vc-feat-card big">
+          <div class="pad">
+            <div class="chip">论文 · arXiv</div>
+            <h3>低剂量 CT 去噪的最新扩散模型方法综述</h3>
+            <p>本文系统综述了扩散模型在低剂量 CT 去噪中的应用，覆盖 DDPM、Score-based 和 Latent Diffusion 三大范式，对比了 PSNR/SSIM 指标和临床可用性。</p>
+            <div class="meta">2026-05-17 · 医学影像 · 10 分钟阅读</div>
+          </div>
+        </a>
+        <a href="#" class="vc-feat-card">
+          <div class="pad">
+            <div class="chip">项目 · GitHub</div>
+            <h3>LangChain Agent 工程实践</h3>
+            <p>从 Demo 到稳定系统需要补哪些能力？工具调用、记忆管理和错误恢复的工程化方案。</p>
+            <div class="meta">2026-05-15 · Agent</div>
+          </div>
+        </a>
+        <a href="#" class="vc-feat-card">
+          <div class="pad">
+            <div class="chip">实践</div>
+            <h3>RAG 系统的分块策略对比</h3>
+            <p>固定长度、语义分块、递归分块三种方案在不同场景下的召回率和延迟对比。</p>
+            <div class="meta">2026-05-14 · RAG</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <hr class="vc-divider">
+
+    <section class="vc-section">
+      <div class="vc-section-bar">
+        <h2>最新入库</h2>
+        <a href="#" class="more">查看全部 →</a>
+      </div>
+      <div class="vc-latest-scroll">
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>Denoising Interferometric Observations Using VIREO</strong><div class="date">05-17</div></a>
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>Compositional Video Generation via CVG</strong><div class="date">05-17</div></a>
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>Predicting Chemotherapy Response from CT</strong><div class="date">05-17</div></a>
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>SANA-WM: 高效分钟级世界模型</strong><div class="date">05-17</div></a>
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>Pelican-Unified 1.0 统一具身智能</strong><div class="date">05-17</div></a>
+        <a href="#" class="vc-latest-card"><div class="chip">论文</div><strong>Warp-as-History 相机控制视频生成</strong><div class="date">05-17</div></a>
+      </div>
+    </section>
+
+    <footer class="vc-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+  </div>
+</div>
+
+<script>
+function switchVariant(id) {
+  document.querySelectorAll('.variant-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.variant-switcher button').forEach(b => b.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

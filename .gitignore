@@ -1,0 +1,16 @@
+node_modules/
+dist/
+target/
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+*.log
+backend/.mvn/
+frontend-portal/.vite/
+frontend-admin/.vite/
+.github/java-upgrade/
+*.code-workspace
+tmp/
