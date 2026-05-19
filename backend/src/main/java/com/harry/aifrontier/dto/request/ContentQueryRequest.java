@@ -13,6 +13,8 @@ public class ContentQueryRequest {
 
     private String contentType;
 
+    private String subCategory;
+
     private Long categoryId;
 
     private Long sourceId;

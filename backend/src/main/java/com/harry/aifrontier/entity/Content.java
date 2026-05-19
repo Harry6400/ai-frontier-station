@@ -20,6 +20,8 @@ public class Content {
 
     private String contentType;
 
+    private String subCategory;
+
     private String summary;
 
     private String coverImage;
@@ -49,4 +51,21 @@ public class Content {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    // TrendRadar fields
+    private java.math.BigDecimal trendScore;
+
+    private Integer starGrowth7d;
+
+    private Integer forkCount;
+
+    private String aiTags;      // JSON string
+
+    private String aiDirection;
+
+    private String aiDifficulty;
+
+    private String aiAudience;
+
+    private String aiLearningPath;
 }

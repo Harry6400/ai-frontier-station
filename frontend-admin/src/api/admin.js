@@ -135,3 +135,27 @@ export function syncGitHubRepo(refId) {
 export function syncAllGitHubRepos() {
   return http.post('/admin/github-sync/all')
 }
+
+// 候选管理
+export function getCandidates(params) {
+  return http.get('/admin/candidates', { params })
+}
+export function getCandidateDetail(id) {
+  return http.get(`/admin/candidates/${id}`)
+}
+export function updateCandidate(id, payload) {
+  return http.put(`/admin/candidates/${id}`, payload)
+}
+export function approveCandidate(id, payload) {
+  return http.post(`/admin/candidates/${id}/approve`, payload || {})
+}
+export function rejectCandidate(id) {
+  return http.post(`/admin/candidates/${id}/reject`)
+}
+export function triggerFetch(sourceType) {
+  return http.post(`/admin/candidates/fetch/${sourceType}`)
+}
+
+export function aiProcessCandidate(id, payload) {
+  return http.post(`/admin/candidates/${id}/ai-process`, payload || {})
+}

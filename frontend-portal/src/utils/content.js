@@ -3,7 +3,8 @@ const CONTENT_TYPE_META = {
   paper: { label: '论文速递', english: 'Research Digest' },
   project: { label: '热门项目', english: 'Project Watch' },
   company_update: { label: '公司动态', english: 'Company Signal' },
-  practice: { label: '技术实践', english: 'Practice Note' }
+  practice: { label: '技术实践', english: 'Practice Note' },
+  arena: { label: '模型评测', english: 'Model Arena' }
 }
 
 const SOURCE_TYPE_META = {
@@ -12,7 +13,8 @@ const SOURCE_TYPE_META = {
   official_blog: { label: '官方博客', description: '适合映射公司、公告链接、发布时间和产品方向。' },
   community: { label: '技术社区', description: '适合映射工程实践、讨论热度和作者链接。' },
   leaderboard: { label: '结构化榜单', description: '适合映射 Arena、HELM、MTEB、SWE-bench 等榜单条目和指标。' },
-  manual: { label: '人工录入', description: '适合第一版演示和人工精选内容。' }
+  manual: { label: '人工录入', description: '适合第一版演示和人工精选内容。' },
+  social: { label: '社交平台', description: '来自X/Twitter、Reddit等社交平台的内容。' }
 }
 
 const EXTRA_FIELD_META = {

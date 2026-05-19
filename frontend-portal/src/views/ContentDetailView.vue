@@ -50,6 +50,27 @@ const hasAiGuide = computed(() => Boolean(
 ))
 const externalRefs = computed(() => detail.value?.externalRefs || [])
 
+const subCategoryLabelMap = {
+  '3d_ct_denoising': '3D CT去噪',
+  'medical_imaging': '医学影像',
+  'large_model': '大模型'
+}
+const subCategoryLabel = computed(() => {
+  const sub = detail.value?.subCategory
+  if (!sub) return ''
+  return subCategoryLabelMap[sub] || sub
+})
+
+const sectionPathMap = {
+  paper: '/papers',
+  project: '/github',
+  news: '/news',
+  company_update: '/company',
+  arena: '/arena',
+  practice: '/tools'
+}
+const backPath = computed(() => sectionPathMap[detail.value?.contentType] || '/contents')
+
 async function loadDetail(id) {
   loading.value = true
   errorMessage.value = ''
@@ -74,7 +95,10 @@ watch(() => route.params.id, (id) => loadDetail(id))
     <main class="page-stack" v-if="detail">
       <section class="detail-hero">
         <article class="section-shell detail-hero-main">
-          <span class="eyebrow-line">{{ typeMeta.label }} · {{ detail.categoryName }}</span>
+          <span class="eyebrow-line">
+            {{ typeMeta.label }} · {{ detail.categoryName }}
+            <span v-if="subCategoryLabel" class="sub-category-tag">{{ subCategoryLabel }}</span>
+          </span>
           <h1>{{ detail.title }}</h1>
           <p class="lead-copy">{{ detail.summary }}</p>
 
@@ -87,10 +111,7 @@ watch(() => route.params.id, (id) => loadDetail(id))
               <span>来源</span>
               <strong>{{ detail.sourceName || '人工录入' }}</strong>
             </div>
-            <div class="detail-meta-cell">
-              <span>阅读时长</span>
-              <strong>{{ detail.readingTime || '-' }} 分钟</strong>
-            </div>
+
             <div class="detail-meta-cell">
               <span>浏览量</span>
               <strong>{{ detail.viewCount }}</strong>
@@ -98,7 +119,7 @@ watch(() => route.params.id, (id) => loadDetail(id))
           </div>
 
           <div class="hero-actions">
-            <RouterLink class="secondary-btn" to="/contents">返回内容广场</RouterLink>
+            <RouterLink class="secondary-btn" :to="backPath">返回内容广场</RouterLink>
             <a
               v-if="detail.sourceUrl"
               class="primary-btn"
@@ -111,56 +132,7 @@ watch(() => route.params.id, (id) => loadDetail(id))
           </div>
         </article>
 
-        <aside class="section-shell detail-hero-side">
-          <div class="detail-signal-stage">
-            <div class="detail-reading-orbit">
-              <span>Views</span>
-              <strong>{{ detail.viewCount }}</strong>
-            </div>
 
-            <div class="detail-signal-copy">
-              <span class="section-kicker">Reading Context</span>
-              <h2>{{ typeMeta.english }}</h2>
-              <p>
-                这一页把内容信息、来源关系和正文阅读区拆开，清晰呈现内容平台详情页的结构化设计。
-              </p>
-            </div>
-          </div>
-
-          <div class="kv-list">
-            <div class="kv-row">
-              <span>栏目</span>
-              <strong>{{ detail.categoryName }}</strong>
-            </div>
-            <div class="kv-row">
-              <span>类型</span>
-              <strong>{{ typeMeta.label }}</strong>
-            </div>
-            <div class="kv-row">
-              <span>来源类型</span>
-              <strong>{{ sourceTypeMeta.label }}</strong>
-            </div>
-            <div class="kv-row">
-              <span>作者</span>
-              <strong>{{ detail.authorName || '未设置' }}</strong>
-            </div>
-            <div class="kv-row">
-              <span>状态</span>
-              <strong>{{ detail.publishStatus }}</strong>
-            </div>
-          </div>
-
-          <a
-            v-if="detail.sourceUrl"
-            class="detail-source-link"
-            :href="detail.sourceUrl"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span>Source Link</span>
-            <strong>前往原始来源</strong>
-          </a>
-        </aside>
       </section>
 
       <section v-if="hasAiGuide" class="section-shell ai-guide-panel">
@@ -225,3 +197,18 @@ watch(() => route.params.id, (id) => loadDetail(id))
     </main>
   </div>
 </template>
+
+<style scoped>
+.sub-category-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+</style>

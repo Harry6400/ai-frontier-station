@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index'
+import { Plus } from '@element-plus/icons-vue'
 import { createSource, getSources, removeSource, updateSource } from '../api/admin'
 
 const loading = ref(false)
@@ -19,31 +20,13 @@ const form = reactive({
 })
 
 const sourceTypeOptions = [
-  {
-    value: 'github',
-    label: 'GitHub',
-    description: '用于 GitHub Trending、仓库榜单、Star 趋势和 README 摘要。'
-  },
-  {
-    value: 'paper',
-    label: '论文站点',
-    description: '用于 arXiv、论文摘要、作者、会议和项目主页。'
-  },
-  {
-    value: 'official_blog',
-    label: '官方博客',
-    description: '用于 OpenAI、DeepSeek 等公司官方公告和产品动态。'
-  },
-  {
-    value: 'community',
-    label: '技术社区',
-    description: '用于工程实践、RAG、Agent、评测等社区经验文章。'
-  },
-  {
-    value: 'manual',
-    label: '人工录入',
-    description: '用于第一版课程演示和人工精选内容。'
-  }
+  { value: 'github', label: 'GitHub', icon: '🔧' },
+  { value: 'paper', label: '论文', icon: '📄' },
+  { value: 'official_blog', label: '官方博客', icon: '📢' },
+  { value: 'leaderboard', label: '榜单', icon: '📊' },
+  { value: 'social', label: '社交平台', icon: '💬' },
+  { value: 'community', label: '社区', icon: '🌐' },
+  { value: 'manual', label: '人工录入', icon: '✏️' }
 ]
 
 const rules = {
@@ -55,20 +38,23 @@ const sourceTypeMetaMap = computed(() =>
   Object.fromEntries(sourceTypeOptions.map((item) => [item.value, item]))
 )
 
-const sourceTypeStats = computed(() =>
-  sourceTypeOptions.map((item) => ({
-    ...item,
-    count: sources.value.filter((source) => source.sourceType === item.value).length
+const groupedSources = computed(() => {
+  const groups = {}
+  sources.value.forEach(source => {
+    const type = source.sourceType || 'manual'
+    if (!groups[type]) {
+      const meta = sourceTypeMetaMap.value[type] || { label: type }
+      groups[type] = { label: meta.label, sources: [] }
+    }
+    groups[type].sources.push(source)
+  })
+  return Object.entries(groups).map(([type, group]) => ({
+    type,
+    label: group.label,
+    count: group.sources.length,
+    sources: group.sources
   }))
-)
-
-function getSourceTypeMeta(type) {
-  return sourceTypeMetaMap.value[type] || {
-    value: type,
-    label: type || '未设置',
-    description: '自定义来源类型，可继续维护为新的采集入口。'
-  }
-}
+})
 
 function resetForm() {
   editingId.value = null
@@ -145,46 +131,36 @@ onMounted(loadSources)
 
 <template>
   <section class="admin-page" v-loading="loading">
-    <div class="page-intro">
-      <h3>来源管理</h3>
+    <div class="page-header">
+      <h3 class="page-title">来源管理</h3>
+      <el-button type="primary" @click="openCreate">
+        <el-icon><Plus /></el-icon>
+        新建来源
+      </el-button>
     </div>
 
-    <div class="source-type-board">
-      <article v-for="item in sourceTypeStats" :key="item.value" class="source-type-card">
-        <span>{{ item.label }}</span>
-        <strong>{{ item.count }}</strong>
-        <p>{{ item.description }}</p>
-      </article>
-    </div>
-
-    <div class="card-panel">
-      <div class="toolbar-row">
-        <el-button type="primary" @click="openCreate">新增来源</el-button>
+    <div class="source-groups">
+      <div v-for="group in groupedSources" :key="group.type" class="source-group">
+        <div class="group-header">
+          <span class="group-label">{{ group.label }}</span>
+          <span class="group-count">{{ group.count }}</span>
+        </div>
+        <div class="group-list">
+          <div v-for="source in group.sources" :key="source.id" class="source-row">
+            <div class="source-info">
+              <span class="source-name">{{ source.name }}</span>
+              <span class="source-slug">{{ source.slug }}</span>
+            </div>
+            <div class="source-meta">
+              <el-tag v-if="!source.isEnabled" type="info" size="small" effect="plain">停用</el-tag>
+              <el-button link type="primary" size="small" @click="openEdit(source)">编辑</el-button>
+              <el-button link type="danger" size="small" @click="handleDelete(source.id)">删除</el-button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <el-table :data="sources" stripe>
-        <el-table-column prop="name" label="来源名称" min-width="160" />
-        <el-table-column prop="slug" label="标识" min-width="160" />
-        <el-table-column label="来源类型" width="150">
-          <template #default="{ row }">
-            <el-tag effect="plain">{{ getSourceTypeMeta(row.sourceType).label }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="websiteUrl" label="官网地址" min-width="220" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.isEnabled ? 'success' : 'info'">
-              {{ row.isEnabled ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <el-empty v-if="!loading && groupedSources.length === 0" description="暂无来源数据" />
     </div>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑来源' : '新增来源'" width="620px">
@@ -226,3 +202,109 @@ onMounted(loadSources)
     </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.source-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.source-group {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--el-fill-color-light);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.group-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.group-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  padding: 2px 8px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.source-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
+  transition: background-color 0.15s;
+}
+
+.source-row:last-child {
+  border-bottom: none;
+}
+
+.source-row:hover {
+  background: var(--el-fill-color-lighter);
+}
+
+.source-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.source-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.source-slug {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  font-family: monospace;
+  background: var(--el-fill-color-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.source-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+</style>

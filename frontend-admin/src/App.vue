@@ -21,17 +21,17 @@ function toggleSidebar() {
 const navItems = [
   { label: '概览', to: '/' },
   { label: '内容管理', to: '/contents' },
-  { label: '分类管理', to: '/categories' },
   { label: '来源管理', to: '/sources' },
-  { label: 'API 设置', to: '/api-settings' }
+  { label: 'API 设置', to: '/api-settings' },
+  { label: '数据采集', to: '/candidates' }
 ]
 
 const pageTitleMap = {
   dashboard: '概览',
   contents: '内容管理',
-  categories: '分类管理',
   sources: '来源管理',
-  'api-settings': 'API 设置'
+  'api-settings': 'API 设置',
+  candidates: '数据采集'
 }
 
 const currentTitle = computed(() => pageTitleMap[route.name] || '概览')

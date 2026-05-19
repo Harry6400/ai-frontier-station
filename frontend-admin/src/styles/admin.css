@@ -1597,13 +1597,14 @@ a {
 }
 
 .dashboard-stat-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .dashboard-stat-card {
   position: relative;
   overflow: hidden;
-  min-height: 150px;
+  min-height: 90px;
+  padding: 16px 18px;
 }
 
 .dashboard-stat-card span {
@@ -1638,7 +1639,7 @@ a {
 
 .dashboard-panel {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .dashboard-panel--large {
@@ -1653,9 +1654,9 @@ a {
 }
 
 .dashboard-panel-head h4 {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--admin-text);
-  font-size: 1.18rem;
+  font-size: 1.05rem;
   letter-spacing: -0.02em;
 }
 
@@ -1750,9 +1751,9 @@ a {
 }
 
 .dashboard-pill-row {
-  min-height: 48px;
-  padding: 0 14px;
-  border-radius: 14px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
 }
 
 .dashboard-pill-row em {
@@ -1767,9 +1768,9 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
   text-decoration: none;
 }
 
@@ -1801,6 +1802,78 @@ a {
   color: var(--admin-text-tertiary);
   font-style: normal;
   font-size: 0.84rem;
+}
+
+.dashboard-grid--full {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 16px;
+}
+
+.dashboard-tab-group {
+  display: flex;
+  gap: 4px;
+  background: var(--admin-surface-muted);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.dashboard-tab {
+  border: 0;
+  background: transparent;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dashboard-tab:hover {
+  color: var(--admin-text);
+}
+
+.dashboard-tab.active {
+  background: var(--admin-surface-elevated, #fff);
+  color: var(--admin-text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.dashboard-dist-panel {
+  gap: 10px;
+}
+
+.dashboard-dist-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-dist-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-line-soft);
+  background: var(--admin-surface-muted);
+}
+
+.dashboard-dist-chip span {
+  color: var(--admin-text-secondary);
+  font-size: 0.82rem;
+}
+
+.dashboard-dist-chip strong {
+  color: var(--admin-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.dashboard-dist-chip em {
+  color: var(--admin-text-tertiary);
+  font-style: normal;
+  font-size: 0.78rem;
 }
 
 .dashboard-text-link {

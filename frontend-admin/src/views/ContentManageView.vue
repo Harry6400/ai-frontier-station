@@ -183,6 +183,7 @@ const pagination = reactive({
 const filters = reactive({
   keyword: '',
   contentType: '',
+  subCategory: '',
   categoryId: null,
   sourceId: null
 })
@@ -578,7 +579,7 @@ function resetForm() {
   form.categoryId = contentOptions.value.categories[0]?.id || null
   form.sourceId = null
   form.sourceUrl = ''
-  form.authorName = 'Harry'
+  form.authorName = ''
   form.publishStatus = 'PUBLISHED'
   form.featuredLevel = 0
   form.readingTime = 5
@@ -890,6 +891,7 @@ async function loadContents() {
       pageSize: pagination.pageSize,
       keyword: filters.keyword || undefined,
       contentType: filters.contentType || undefined,
+      subCategory: filters.subCategory || undefined,
       categoryId: filters.categoryId || undefined,
       sourceId: filters.sourceId || undefined
     })
@@ -905,6 +907,9 @@ async function loadContents() {
 async function initialize() {
   try {
     await loadOptions()
+    if (contentOptions.value.contentTypes?.length) {
+      filters.contentType = contentOptions.value.contentTypes[0].value
+    }
     resetForm()
     await loadContents()
   } catch (error) {
@@ -919,7 +924,8 @@ function handleSearch() {
 
 function clearFilters() {
   filters.keyword = ''
-  filters.contentType = ''
+  filters.contentType = contentOptions.value.contentTypes?.[0]?.value || ''
+  filters.subCategory = ''
   filters.categoryId = null
   filters.sourceId = null
   handleSearch()
@@ -1205,47 +1211,34 @@ onMounted(initialize)
           clearable
           @keyup.enter="handleSearch"
         />
-        <el-select v-model="filters.contentType" placeholder="内容类型" clearable class="toolbar-select">
-          <el-option
-            v-for="item in contentOptions.contentTypes"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-        <el-select v-model="filters.categoryId" placeholder="分类" clearable class="toolbar-select">
-          <el-option
-            v-for="item in contentOptions.categories"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
-        <el-select v-model="filters.sourceId" placeholder="来源" clearable class="toolbar-select">
-          <el-option
-            v-for="item in contentOptions.sources"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="clearFilters">清空筛选</el-button>
-        <el-divider direction="vertical" />
-        <el-dropdown @command="handleImportCommand">
-          <el-button type="success">
-            数据导入 <el-icon class="el-icon--right"><arrow-down /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="github">GitHub 项目导入</el-dropdown-item>
-              <el-dropdown-item command="arxiv">arXiv 论文导入</el-dropdown-item>
-              <el-dropdown-item command="huggingface">HuggingFace 论文导入</el-dropdown-item>
-              <el-dropdown-item command="ai-source">AI 来源整理</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-button @click="openCreate">新建内容</el-button>
+      </div>
+      <div class="type-tab-strip">
+        <button
+          v-for="item in contentOptions.contentTypes"
+          :key="item.value"
+          :class="['type-tab', { active: filters.contentType === item.value }]"
+          @click="filters.contentType = item.value; handleSearch()"
+        >{{ item.label }}</button>
+      </div>
+      <div v-if="filters.contentType === 'paper'" class="sub-cat-strip">
+        <button
+          :class="['sub-cat', { active: !filters.subCategory }]"
+          @click="filters.subCategory = ''; handleSearch()"
+        >全部论文</button>
+        <button
+          :class="['sub-cat', { active: filters.subCategory === '3d_ct_denoising' }]"
+          @click="filters.subCategory = '3d_ct_denoising'; handleSearch()"
+        >3D CT 去噪</button>
+        <button
+          :class="['sub-cat', { active: filters.subCategory === 'medical_imaging' }]"
+          @click="filters.subCategory = 'medical_imaging'; handleSearch()"
+        >医学影像</button>
+        <button
+          :class="['sub-cat', { active: filters.subCategory === 'large_model' }]"
+          @click="filters.subCategory = 'large_model'; handleSearch()"
+        >大模型</button>
       </div>
 
       <div class="content-list">
@@ -1337,9 +1330,6 @@ onMounted(initialize)
                 <el-form-item label="精选级别">
                   <el-input-number v-model="form.featuredLevel" :min="0" :max="5" />
                 </el-form-item>
-                <el-form-item label="阅读时长">
-                  <el-input-number v-model="form.readingTime" :min="1" :max="60" />
-                </el-form-item>
                 <el-form-item label="发布时间">
                   <el-date-picker
                     v-model="form.publishedAt"
@@ -1353,15 +1343,30 @@ onMounted(initialize)
               <el-form-item label="摘要" prop="summary">
                 <el-input v-model="form.summary" type="textarea" :rows="3" />
               </el-form-item>
-              <el-form-item label="封面图">
-                <el-input v-model="form.coverImage" placeholder="当前阶段可先留空" />
-              </el-form-item>
             </div>
 
             <div v-show="editorTab === 'body'">
               <el-form-item label="正文" prop="bodyMarkdown">
                 <el-input v-model="form.bodyMarkdown" type="textarea" :rows="18" />
               </el-form-item>
+              <div style="margin-top: -8px; margin-bottom: 16px; padding: 12px 16px; background: #f4f4f5; border-radius: 6px; font-size: 12px; color: #909399; line-height: 1.6;">
+                <div style="font-weight: 600; color: #606266; margin-bottom: 6px;">📋 AI 输出模板（推荐格式）</div>
+                <pre style="margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px;">## 核心贡献
+一句话说明论文/产品的核心贡献。
+
+## 方法简述
+简要描述使用的方法或技术路线。
+
+## 关键结果
+- 结果1
+- 结果2
+
+## 与CT去噪/医学影像的关联度
+评分(1-10) + 一句话说明。
+
+## 推荐理由
+为什么值得阅读/关注。</pre>
+              </div>
             </div>
           </el-form>
 
@@ -1953,3 +1958,36 @@ onMounted(initialize)
     </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.type-tab-strip {
+  display: flex; gap: 2px; background: var(--admin-surface-muted, #f5f5f5);
+  border-radius: 10px; padding: 3px; margin-bottom: 12px;
+}
+.type-tab {
+  padding: 7px 16px; border-radius: 8px; border: 0; background: transparent;
+  font-size: 13px; font-weight: 600; color: var(--admin-text-secondary, #666);
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.type-tab:hover { color: var(--admin-text, #333); }
+.type-tab.active {
+  background: var(--admin-surface-elevated, #fff);
+  color: var(--admin-text, #333);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.sub-cat-strip {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.sub-cat {
+  padding: 5px 12px; border-radius: 6px;
+  border: 1px solid var(--admin-line-soft, #e0e0e0);
+  background: transparent; font-size: 12px; font-weight: 600;
+  color: var(--admin-text-secondary, #666); cursor: pointer; transition: all 0.12s;
+}
+.sub-cat:hover { border-color: var(--admin-brand, #2563EB); color: var(--admin-brand, #2563EB); }
+.sub-cat.active {
+  background: var(--admin-brand, #2563EB); color: #fff;
+  border-color: var(--admin-brand, #2563EB);
+}
+</style>

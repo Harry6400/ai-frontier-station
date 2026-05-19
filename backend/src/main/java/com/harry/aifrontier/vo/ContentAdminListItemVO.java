@@ -15,6 +15,8 @@ public class ContentAdminListItemVO {
 
     private String contentType;
 
+    private String subCategory;
+
     private String summary;
 
     private String publishStatus;
@@ -28,6 +30,15 @@ public class ContentAdminListItemVO {
     private String sourceName;
 
     private String sourceType;
+
+    private java.math.BigDecimal trendScore;
+    private Integer starGrowth7d;
+    private Integer forkCount;
+    private String aiTags;
+    private String aiDirection;
+    private String aiDifficulty;
+    private String aiAudience;
+    private String aiLearningPath;
 
     private LocalDateTime publishedAt;
 

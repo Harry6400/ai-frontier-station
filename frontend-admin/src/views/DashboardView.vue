@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus/es/components/message/index'
 import { fetchDashboardSnapshot } from '../api/admin'
 
 const loading = ref(false)
+const distributionTab = ref('content')
 const overview = ref({
   totals: {
     contents: 0,
@@ -27,15 +28,6 @@ const statCards = computed(() => [
   { label: '来源入口', value: overview.value.totals.sources, tone: 'neutral' },
   { label: '外部引用', value: overview.value.totals.externalRefs, tone: 'accent' }
 ])
-
-const operationCards = computed(() => [
-  { title: '项目内容占比', value: `${findRatio(overview.value.contentTypeStats, 'project')}%` },
-  { title: 'GitHub 来源占比', value: `${findRatio(overview.value.sourceTypeStats, 'github')}%` }
-])
-
-function findRatio(items, value) {
-  return items.find((item) => item.value === value)?.ratio || 0
-}
 
 function formatDateTime(value) {
   if (!value) return '暂无时间'
@@ -71,6 +63,7 @@ onMounted(loadDashboard)
 
 <template>
   <section class="admin-page" v-loading="loading">
+    <!-- 统计卡片 -->
     <div class="stat-grid dashboard-stat-grid">
       <article
         v-for="item in statCards"
@@ -83,50 +76,40 @@ onMounted(loadDashboard)
       </article>
     </div>
 
+    <!-- 数据分布：全宽扁平 -->
+    <section class="card-panel dashboard-panel dashboard-dist-panel">
+      <div class="dashboard-panel-head">
+        <h4>数据分布</h4>
+        <div class="dashboard-tab-group">
+          <button
+            :class="['dashboard-tab', { active: distributionTab === 'content' }]"
+            @click="distributionTab = 'content'"
+          >内容类型</button>
+          <button
+            :class="['dashboard-tab', { active: distributionTab === 'source' }]"
+            @click="distributionTab = 'source'"
+          >来源类型</button>
+        </div>
+      </div>
+      <div v-show="distributionTab === 'content'" class="dashboard-dist-strip">
+        <article v-for="item in overview.contentTypeStats" :key="item.value" class="dashboard-dist-chip">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.count }}</strong>
+          <em>{{ item.ratio }}%</em>
+        </article>
+      </div>
+      <div v-show="distributionTab === 'source'" class="dashboard-dist-strip">
+        <article v-for="item in overview.sourceTypeStats" :key="item.value" class="dashboard-dist-chip">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.count }}</strong>
+          <em>{{ item.ratio }}%</em>
+        </article>
+      </div>
+    </section>
+
+    <!-- 近期内容 + 外部引用 并排 -->
     <div class="dashboard-grid dashboard-grid--wide">
       <section class="card-panel dashboard-panel">
-        <div class="dashboard-panel-head">
-          <h4>运营信号</h4>
-        </div>
-        <div class="dashboard-signal-grid">
-          <article v-for="item in operationCards" :key="item.title" class="dashboard-signal-card">
-            <strong>{{ item.value }}</strong>
-            <span>{{ item.title }}</span>
-          </article>
-        </div>
-      </section>
-    </div>
-
-    <div class="dashboard-grid dashboard-grid--wide">
-      <section class="card-panel dashboard-panel">
-        <div class="dashboard-panel-head">
-          <h4>内容类型分布</h4>
-        </div>
-        <div class="dashboard-pill-list">
-          <article v-for="item in overview.contentTypeStats" :key="item.value" class="dashboard-pill-row">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.count }}</strong>
-            <em>{{ item.ratio }}%</em>
-          </article>
-        </div>
-      </section>
-
-      <section class="card-panel dashboard-panel">
-        <div class="dashboard-panel-head">
-          <h4>来源类型分布</h4>
-        </div>
-        <div class="dashboard-pill-list">
-          <article v-for="item in overview.sourceTypeStats" :key="item.value" class="dashboard-pill-row">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.count }}</strong>
-            <em>{{ item.ratio }}%</em>
-          </article>
-        </div>
-      </section>
-    </div>
-
-    <div class="dashboard-grid dashboard-grid--wide">
-      <section class="card-panel dashboard-panel dashboard-panel--large">
         <div class="dashboard-panel-head">
           <h4>近期内容</h4>
           <RouterLink class="dashboard-text-link" to="/contents">内容管理</RouterLink>

@@ -7,7 +7,7 @@ public class PortalContentQueryRequest {
 
     private Long pageNum = 1L;
 
-    private Long pageSize = 9L;
+    private Long pageSize = 20L;
 
     private String keyword;
 
@@ -18,4 +18,6 @@ public class PortalContentQueryRequest {
     private Long sourceId;
 
     private String sortBy = "latest";
+
+    private String subCategory;
 }

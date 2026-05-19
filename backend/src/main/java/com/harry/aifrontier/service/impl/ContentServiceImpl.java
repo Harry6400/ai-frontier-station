@@ -303,6 +303,7 @@ public class ContentServiceImpl implements ContentService {
         return new LambdaQueryWrapper<Content>()
                 .like(keyword != null && !keyword.isBlank(), Content::getTitle, keyword)
                 .eq(request.getContentType() != null && !request.getContentType().isBlank(), Content::getContentType, request.getContentType())
+                .eq(request.getSubCategory() != null && !request.getSubCategory().isBlank(), Content::getSubCategory, request.getSubCategory())
                 .eq(request.getCategoryId() != null, Content::getCategoryId, request.getCategoryId())
                 .eq(request.getSourceId() != null, Content::getSourceId, request.getSourceId())
                 .eq(request.getPublishStatus() != null && !request.getPublishStatus().isBlank(), Content::getPublishStatus, request.getPublishStatus())
@@ -318,7 +319,8 @@ public class ContentServiceImpl implements ContentService {
                 .like(keyword != null && !keyword.isBlank(), Content::getTitle, keyword)
                 .eq(request.getContentType() != null && !request.getContentType().isBlank(), Content::getContentType, request.getContentType())
                 .eq(request.getCategoryId() != null, Content::getCategoryId, request.getCategoryId())
-                .eq(request.getSourceId() != null, Content::getSourceId, request.getSourceId());
+                .eq(request.getSourceId() != null, Content::getSourceId, request.getSourceId())
+                .eq(request.getSubCategory() != null && !request.getSubCategory().isBlank(), Content::getSubCategory, request.getSubCategory());
         applyPortalSort(query, request.getSortBy());
         return query;
     }

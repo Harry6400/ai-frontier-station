@@ -17,7 +17,7 @@ const navItems = [
   { label: '论文', to: '/papers' },
   { label: 'GitHub', to: '/github' },
   { label: 'AI 资讯', to: '/news' },
-  { label: '公司动态', to: '/company' },
+  { label: '产品动态', to: '/company' },
   { label: '模型评测', to: '/arena' },
   { label: '工具实践', to: '/tools' }
 ]

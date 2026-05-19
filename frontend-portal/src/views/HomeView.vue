@@ -23,7 +23,7 @@ const navSections = [
   { emoji: '📄', title: '论文速递', description: 'arXiv 论文', contentType: 'paper', route: '/papers' },
   { emoji: '🐙', title: 'GitHub 开源', description: '开源仓库', contentType: 'project', route: '/github' },
   { emoji: '📰', title: 'AI 资讯', description: '行业新闻', contentType: 'news', route: '/news' },
-  { emoji: '🏢', title: '公司动态', description: '战略产品', contentType: 'company_update', route: '/company' },
+  { emoji: '⚡', title: '产品动态', description: '模型/API/IDE', contentType: 'company_update', route: '/company' },
   { emoji: '🏆', title: '模型评测', description: '模型评测', contentType: 'arena', route: '/arena', coming: true },
   { emoji: '🔧', title: '工具实践', description: '最佳实践', contentType: 'practice', route: '/tools' }
 ]
