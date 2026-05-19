@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具实践板块 — 设计稿</title>
+<style>
+:root {
+  color-scheme: light; font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #151a24; background-color: #f6f7f3;
+  --canvas: #f6f7f3; --paper: #ffffff;
+  --line: rgba(17, 24, 39, 0.09); --line-strong: rgba(17, 24, 39, 0.18);
+  --text-main: #151a24; --text-secondary: #566072; --text-tertiary: #8490a3;
+  --accent: #2563EB; --accent-soft: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px; --radius-sm: 10px;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", monospace;
+  --green: #059669; --green-soft: rgba(5, 150, 105, 0.08);
+  --orange: #D97706; --orange-soft: rgba(217, 119, 6, 0.08);
+  --purple: #7C3AED; --purple-soft: rgba(124, 58, 237, 0.08);
+  --red: #DC2626; --red-soft: rgba(220, 38, 38, 0.08);
+  --teal: #0D9488; --teal-soft: rgba(13, 148, 136, 0.08);
+  --pink: #DB2777; --pink-soft: rgba(219, 39, 119, 0.08);
+  --indigo: #4F46E5; --indigo-soft: rgba(79, 70, 229, 0.08);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark; color: #e8eef8; background-color: #0a111d;
+  --canvas: #0a111d; --paper: #111b2a;
+  --line: rgba(153, 171, 201, 0.16); --line-strong: rgba(153, 171, 201, 0.28);
+  --text-main: #edf3fe; --text-secondary: #afbed5; --text-tertiary: #8997ad;
+  --accent: #93C5FD; --accent-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 0 rgba(240,246,252,0.03), 0 18px 42px rgba(1,4,9,0.32);
+  --green: #34D399; --green-soft: rgba(52, 211, 153, 0.12);
+  --orange: #FBBF24; --orange-soft: rgba(251, 191, 36, 0.12);
+  --purple: #A78BFA; --purple-soft: rgba(167, 139, 250, 0.12);
+  --red: #F87171; --red-soft: rgba(248, 113, 113, 0.12);
+  --teal: #2DD4BF; --teal-soft: rgba(45, 212, 191, 0.12);
+  --pink: #F472B6; --pink-soft: rgba(244, 114, 182, 0.12);
+  --indigo: #818CF8; --indigo-soft: rgba(129, 140, 248, 0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: inherit; color: var(--text-main); background: var(--canvas); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.switcher-label { font-weight: 700; color: var(--text-secondary); margin-right: 8px; }
+.switcher-theme {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.page-container { max-width: 920px; margin: 0 auto; padding: 68px 32px 48px; }
+.section-title { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* Header */
+.page-header {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  padding: 16px 22px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 14px;
+}
+.page-header-icon {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--teal-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.page-header-info { flex: 1; }
+.page-header-title { font-size: 15px; font-weight: 700; }
+.page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+.page-header-stats {
+  display: flex; gap: 14px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.page-header-stats strong { color: var(--accent); font-weight: 700; }
+
+/* AI summary */
+.ai-summary {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 14px 18px; margin-bottom: 14px;
+}
+.ai-summary-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.ai-summary-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.ai-summary-title { font-size: 13px; font-weight: 600; }
+.ai-summary-text {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+}
+.ai-summary-text strong { color: var(--text-main); font-weight: 600; }
+
+/* Source chips */
+.source-strip {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.source-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--paper); font-size: 12px; font-weight: 600;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+  white-space: nowrap;
+}
+.source-chip:hover { border-color: var(--line-strong); color: var(--text-main); }
+.source-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.source-chip-logo { font-size: 14px; }
+.source-chip-count {
+  font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+  background: rgba(0,0,0,0.05); color: var(--text-tertiary);
+}
+.source-chip.active .source-chip-count { background: rgba(37,99,235,0.15); color: var(--accent); }
+
+/* Type tabs */
+.type-tabs {
+  display: flex; gap: 2px; background: var(--canvas); border-radius: 10px; padding: 3px;
+  border: 1px solid var(--line); width: fit-content; margin-bottom: 16px;
+}
+.type-tab {
+  padding: 6px 14px; border-radius: 8px; border: 0; background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-tertiary);
+  cursor: pointer; transition: all 0.15s;
+}
+.type-tab:hover { color: var(--text-main); }
+.type-tab.active { background: var(--paper); color: var(--text-main); box-shadow: var(--shadow); }
+
+/* Feed */
+.feed { display: flex; flex-direction: column; }
+.feed-day {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0; margin-top: 8px;
+}
+.feed-day-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--text-tertiary); white-space: nowrap;
+}
+.feed-day-line { flex: 1; height: 1px; background: var(--line); }
+
+.feed-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+  transition: all 0.12s;
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-item:hover { background: rgba(0,0,0,0.01); padding-left: 6px; padding-right: 6px; border-radius: 8px; }
+:root[data-theme='dark'] .feed-item:hover { background: rgba(255,255,255,0.02); }
+
+.feed-avatar {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  border: 1px solid var(--line);
+}
+.feed-avatar.kol {
+  border-color: var(--accent); background: var(--accent-soft);
+}
+
+.feed-body { flex: 1; min-width: 0; }
+.feed-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.feed-title {
+  font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: color 0.12s;
+}
+.feed-title:hover { color: var(--accent); }
+.feed-type {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px; flex-shrink: 0;
+}
+.feed-type--guide { background: var(--teal-soft); color: var(--teal); }
+.feed-type--workflow { background: var(--purple-soft); color: var(--purple); }
+.feed-type--tool { background: var(--green-soft); color: var(--green); }
+.feed-type--opinion { background: var(--orange-soft); color: var(--orange); }
+.feed-type--benchmark { background: var(--pink-soft); color: var(--pink); }
+
+.feed-author {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  background: var(--indigo-soft); color: var(--indigo); flex-shrink: 0;
+}
+.feed-author.kol-author {
+  background: var(--accent-soft); color: var(--accent);
+}
+
+.feed-source-tag {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  border: 1px solid var(--line); color: var(--text-tertiary); flex-shrink: 0;
+}
+
+.feed-excerpt {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.feed-meta {
+  display: flex; align-items: center; gap: 10px; margin-top: 4px;
+  font-size: 11.5px; color: var(--text-tertiary);
+}
+.feed-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+.feed-meta .engagement { display: flex; align-items: center; gap: 3px; }
+
+.feed-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-top: 2px;
+}
+.feed-time { font-size: 11.5px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.feed-link {
+  font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+  border: 1px solid var(--line); color: var(--text-tertiary); text-decoration: none;
+  transition: all 0.12s;
+}
+.feed-link:hover { border-color: var(--accent); color: var(--accent); }
+
+/* KOL highlight bar */
+.kol-highlight {
+  border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--accent-soft);
+  padding: 12px 16px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.kol-highlight-avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--paper);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  border: 2px solid var(--accent); flex-shrink: 0;
+}
+.kol-highlight-body { flex: 1; }
+.kol-highlight-name { font-size: 13px; font-weight: 700; color: var(--accent); }
+.kol-highlight-text {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin-top: 2px;
+}
+.kol-highlight-text strong { color: var(--text-main); }
+.kol-highlight-link {
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+  background: var(--accent); color: #fff; text-decoration: none; flex-shrink: 0;
+  transition: opacity 0.12s;
+}
+.kol-highlight-link:hover { opacity: 0.85; }
+
+.dash-footer {
+  padding: 32px 0; text-align: center; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--line); margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 68px 16px 36px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .kol-highlight { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="switcher-label">🔧 工具实践</span>
+  <button class="switcher-theme" onclick="toggleTheme()" title="切换主题">◐</button>
+</div>
+
+<div class="page-container">
+  <div class="section-title">工具实践</div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-header-icon">🔧</div>
+    <div class="page-header-info">
+      <div class="page-header-title">AI 工具与实践</div>
+      <div class="page-header-sub">来自社交平台和科技社区的 AI 工具分享、实践教程和行业洞察</div>
+    </div>
+    <div class="page-header-stats">
+      <span>今日 <strong>8</strong> 条</span>
+      <span>来源 <strong>4</strong> 个平台</span>
+    </div>
+  </div>
+
+  <!-- AI daily summary -->
+  <div class="ai-summary">
+    <div class="ai-summary-head">
+      <span class="ai-summary-badge">✦ AI 每日精选</span>
+      <span class="ai-summary-title">今日工具实践要点</span>
+    </div>
+    <div class="ai-summary-text">
+      今日最受关注：<strong>Karpathy</strong>分享了一篇关于"AI编程最佳实践"的长文，强调理解代码比盲目接受AI建议更重要，引发广泛讨论。
+      工具方面，<strong>MCP协议</strong>的生态持续爆发，社区贡献了大量新连接器（Notion、Slack、PostgreSQL等）。
+      <strong>Cursor</strong>用户总结出一套高效的"Plan → Generate → Review"工作流，实测编码效率提升3倍。
+    </div>
+  </div>
+
+  <!-- KOL Highlight -->
+  <div class="kol-highlight">
+    <div class="kol-highlight-avatar">👨‍💻</div>
+    <div class="kol-highlight-body">
+      <div class="kol-highlight-name">🔥 Karpathy 今日分享</div>
+      <div class="kol-highlight-text">
+        "AI编程的正确姿势不是让AI替你写所有代码，而是<strong>用AI加速你的思考循环</strong>。先理解问题，再让AI生成方案，最后用你的判断力筛选和修改。"
+      </div>
+    </div>
+    <a class="kol-highlight-link" href="#">查看原文</a>
+  </div>
+
+  <!-- Source chips -->
+  <div class="source-strip">
+    <button class="source-chip active" onclick="toggleChip(this)" data-source="all">
+      全部来源
+    </button>
+    <button class="source-chip" onclick="toggleChip(this)" data-source="twitter">
+      <span class="source-chip-logo">𝕏</span>X / Twitter
+      <span class="source-chip-count">4</span>
+    </button>
+    <button class="source-chip" onclick="toggleChip(this)" data-source="reddit">
+      <span class="source-chip-logo">🤖</span>Reddit
+      <span class="source-chip-count">2</span>
+    </button>
+    <button class="source-chip" onclick="toggleChip(this)" data-source="hn">
+      <span class="source-chip-logo">📰</span>Hacker News
+      <span class="source-chip-count">1</span>
+    </button>
+    <button class="source-chip" onclick="toggleChip(this)" data-source="ph">
+      <span class="source-chip-logo">🚀</span>Product Hunt
+      <span class="source-chip-count">1</span>
+    </button>
+  </div>
+
+  <!-- Type tabs -->
+  <div class="type-tabs">
+    <button class="type-tab active" onclick="switchType(this)">全部类型</button>
+    <button class="type-tab" onclick="switchType(this)">使用指南</button>
+    <button class="type-tab" onclick="switchType(this)">工作流</button>
+    <button class="type-tab" onclick="switchType(this)">工具推荐</button>
+    <button class="type-tab" onclick="switchType(this)">行业观点</button>
+  </div>
+
+  <!-- Feed -->
+  <div class="feed">
+    <div class="feed-day">
+      <span class="feed-day-label">今天 · 5月18日</span>
+      <span class="feed-day-line"></span>
+    </div>
+
+    <div class="feed-item" data-source="twitter" data-type="opinion">
+      <div class="feed-avatar kol">👨‍💻</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">AI编程的正确姿势：理解代码比盲目接受AI建议更重要</span>
+          <span class="feed-type feed-type--opinion">行业观点</span>
+          <span class="feed-author kol-author">@karpathy</span>
+          <span class="feed-source-tag">𝕏 Twitter</span>
+        </div>
+        <div class="feed-excerpt">Karpathy长文分享AI编程方法论：先理解问题本质，再让AI生成方案，最后用判断力筛选修改。强调"AI是加速器，不是替代品"。</div>
+        <div class="feed-meta">
+          <span class="engagement">❤️ 4.2k</span>
+          <span class="sep"></span>
+          <span class="engagement">🔄 1.8k</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 326</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">12:30</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="twitter" data-type="workflow">
+      <div class="feed-avatar kol">⚡</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Cursor 高效工作流：Plan → Generate → Review，编码效率提升3倍</span>
+          <span class="feed-type feed-type--workflow">工作流</span>
+          <span class="feed-author">@swyx</span>
+          <span class="feed-source-tag">𝕏 Twitter</span>
+        </div>
+        <div class="feed-excerpt">swyx总结的Cursor三步工作流：先用Chat模式让AI理解需求并生成计划，再用Composer批量生成代码，最后用Diff视图逐行Review。</div>
+        <div class="feed-meta">
+          <span class="engagement">❤️ 2.1k</span>
+          <span class="sep"></span>
+          <span class="engagement">🔄 890</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 145</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">10:15</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="reddit" data-type="tool">
+      <div class="feed-avatar">🔌</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">MCP协议生态爆发：社区贡献了20+新连接器（Notion、Slack、PostgreSQL...）</span>
+          <span class="feed-type feed-type--tool">工具推荐</span>
+          <span class="feed-author">r/MachineLearning</span>
+          <span class="feed-source-tag">Reddit</span>
+        </div>
+        <div class="feed-excerpt">MCP（Model Context Protocol）协议发布3个月后，社区已经贡献了20多个官方和非官方连接器，覆盖数据库、笔记、通讯、CRM等场景。</div>
+        <div class="feed-meta">
+          <span class="engagement">👍 1.5k</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 287</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">09:30</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-day">
+      <span class="feed-day-label">昨天 · 5月17日</span>
+      <span class="feed-day-line"></span>
+    </div>
+
+    <div class="feed-item" data-source="twitter" data-type="guide">
+      <div class="feed-avatar kol">🧠</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">本地部署大模型完全指南：从Ollama到vLLM的选型建议</span>
+          <span class="feed-type feed-type--guide">使用指南</span>
+          <span class="feed-author">@ggerganov</span>
+          <span class="feed-source-tag">𝕏 Twitter</span>
+        </div>
+        <div class="feed-excerpt">ggerganov（llama.cpp作者）分享本地部署大模型的完整选型指南：个人用户用Ollama最简单，团队部署用vLLM性能最佳，边缘设备用llama.cpp最灵活。</div>
+        <div class="feed-meta">
+          <span class="engagement">❤️ 3.8k</span>
+          <span class="sep"></span>
+          <span class="engagement">🔄 1.2k</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 198</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">16:45</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="hn" data-type="tool">
+      <div class="feed-avatar">📰</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Show HN: 开源AI Agent框架对比（LangChain vs AutoGen vs CrewAI）</span>
+          <span class="feed-type feed-type--tool">工具推荐</span>
+          <span class="feed-source-tag">Hacker News</span>
+        </div>
+        <div class="feed-excerpt">开发者对比三大AI Agent框架：LangChain生态最全但较重，AutoGen多Agent能力强，CrewAI最易上手。附带实际性能基准测试数据。</div>
+        <div class="feed-meta">
+          <span class="engagement">⬆️ 892</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 156</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">14:20</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="reddit" data-type="workflow">
+      <div class="feed-avatar">🔧</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">实测：用Claude Code + MCP连接数据库，10分钟搞定数据迁移脚本</span>
+          <span class="feed-type feed-type--workflow">工作流</span>
+          <span class="feed-author">r/LocalLLaMA</span>
+          <span class="feed-source-tag">Reddit</span>
+        </div>
+        <div class="feed-excerpt">用户分享实战经验：通过MCP协议让Claude Code直接连接PostgreSQL，自动生成数据迁移脚本并验证，整个过程只需10分钟。</div>
+        <div class="feed-meta">
+          <span class="engagement">👍 678</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 89</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">11:10</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="ph" data-type="tool">
+      <div class="feed-avatar">🚀</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Product Hunt #1: Mem0 - AI应用的长期记忆层</span>
+          <span class="feed-type feed-type--tool">工具推荐</span>
+          <span class="feed-source-tag">Product Hunt</span>
+        </div>
+        <div class="feed-excerpt">Mem0为AI应用提供跨会话的长期记忆能力，支持用户偏好学习、上下文持续和个性化响应。今日Product Hunt排名第一。</div>
+        <div class="feed-meta">
+          <span class="engagement">🔺 1.2k</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 67</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">09:00</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-source="twitter" data-type="benchmark">
+      <div class="feed-avatar">📊</div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">实测对比：5款AI编程助手在React项目中的代码质量评分</span>
+          <span class="feed-type feed-type--benchmark">基准测试</span>
+          <span class="feed-author">@levelsio</span>
+          <span class="feed-source-tag">𝕏 Twitter</span>
+        </div>
+        <div class="feed-excerpt">levelsio对比Cursor、Copilot、Codeium、Tabnine、Cody在React项目中的表现：Cursor综合评分最高，Copilot补全最快，Codeium免费方案性价比最佳。</div>
+        <div class="feed-meta">
+          <span class="engagement">❤️ 1.9k</span>
+          <span class="sep"></span>
+          <span class="engagement">🔄 567</span>
+          <span class="sep"></span>
+          <span class="engagement">💬 234</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">08:30</span>
+        <a class="feed-link" href="#">原文</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+</div>
+
+<script>
+function toggleChip(btn) {
+  document.querySelectorAll('.source-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  filterFeed();
+}
+function switchType(btn) {
+  btn.parentElement.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  filterFeed();
+}
+function filterFeed() {
+  const activeSource = document.querySelector('.source-chip.active')?.dataset.source || 'all';
+  const activeType = document.querySelector('.type-tab.active')?.textContent || '全部类型';
+  const typeMap = { '全部类型': 'all', '使用指南': 'guide', '工作流': 'workflow', '工具推荐': 'tool', '行业观点': 'opinion', '基准测试': 'benchmark' };
+  const typeFilter = typeMap[activeType] || 'all';
+
+  document.querySelectorAll('.feed-item').forEach(item => {
+    const matchSource = activeSource === 'all' || item.dataset.source === activeSource;
+    const matchType = typeFilter === 'all' || item.dataset.type === typeFilter;
+    item.style.display = (matchSource && matchType) ? 'flex' : 'none';
+  });
+
+  // Show/hide day dividers
+  document.querySelectorAll('.feed-day').forEach(day => {
+    let next = day.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('feed-day')) {
+      if (next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    day.style.display = hasVisible ? 'flex' : 'none';
+  });
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark';
+}
+</script>
+</body>
+</html>

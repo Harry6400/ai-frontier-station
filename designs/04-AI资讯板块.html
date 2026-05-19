@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI资讯板块 — 设计稿</title>
+<style>
+:root {
+  color-scheme: light; font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #151a24; background-color: #f6f7f3;
+  --canvas: #f6f7f3; --paper: #ffffff;
+  --line: rgba(17, 24, 39, 0.09); --line-strong: rgba(17, 24, 39, 0.18);
+  --text-main: #151a24; --text-secondary: #566072; --text-tertiary: #8490a3;
+  --accent: #2563EB; --accent-soft: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px; --radius-sm: 10px;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", monospace;
+  --green: #059669; --green-soft: rgba(5, 150, 105, 0.08);
+  --orange: #D97706; --orange-soft: rgba(217, 119, 6, 0.08);
+  --purple: #7C3AED; --purple-soft: rgba(124, 58, 237, 0.08);
+  --red: #DC2626; --red-soft: rgba(220, 38, 38, 0.08);
+  --teal: #0D9488; --teal-soft: rgba(13, 148, 136, 0.08);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark; color: #e8eef8; background-color: #0a111d;
+  --canvas: #0a111d; --paper: #111b2a;
+  --line: rgba(153, 171, 201, 0.16); --line-strong: rgba(153, 171, 201, 0.28);
+  --text-main: #edf3fe; --text-secondary: #afbed5; --text-tertiary: #8997ad;
+  --accent: #93C5FD; --accent-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 0 rgba(240,246,252,0.03), 0 18px 42px rgba(1,4,9,0.32);
+  --green: #34D399; --green-soft: rgba(52, 211, 153, 0.12);
+  --orange: #FBBF24; --orange-soft: rgba(251, 191, 36, 0.12);
+  --purple: #A78BFA; --purple-soft: rgba(167, 139, 250, 0.12);
+  --red: #F87171; --red-soft: rgba(248, 113, 113, 0.12);
+  --teal: #2DD4BF; --teal-soft: rgba(45, 212, 191, 0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: inherit; color: var(--text-main); background: var(--canvas); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.switcher-label { font-weight: 700; color: var(--text-secondary); margin-right: 8px; }
+.switcher-theme {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.page-container { max-width: 900px; margin: 0 auto; padding: 68px 32px 48px; }
+.section-title { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* Daily header */
+.daily-header {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  padding: 16px 22px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 14px;
+}
+.daily-header-icon {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.daily-header-info { flex: 1; }
+.daily-header-title { font-size: 15px; font-weight: 700; }
+.daily-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+.daily-header-stats {
+  display: flex; gap: 14px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.daily-header-stats strong { color: var(--accent); font-weight: 700; }
+
+/* Category tabs */
+.cat-tabs {
+  display: flex; gap: 2px; background: var(--canvas); border-radius: 10px; padding: 3px;
+  border: 1px solid var(--line); width: fit-content; margin-bottom: 16px;
+}
+.cat-tab {
+  padding: 7px 16px; border-radius: 8px; border: 0; background: transparent;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--text-tertiary);
+  cursor: pointer; transition: all 0.15s;
+}
+.cat-tab:hover { color: var(--text-main); }
+.cat-tab.active { background: var(--paper); color: var(--text-main); box-shadow: var(--shadow); }
+
+/* Toolbar */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+}
+.toolbar-left { font-size: 12px; color: var(--text-tertiary); font-weight: 600; }
+.view-toggle {
+  display: flex; gap: 2px; background: var(--canvas); border-radius: 8px; padding: 3px;
+  border: 1px solid var(--line);
+}
+.view-btn {
+  width: 32px; height: 28px; border-radius: 6px; border: 0; background: transparent;
+  color: var(--text-tertiary); cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.view-btn:hover { color: var(--text-main); }
+.view-btn.active { background: var(--paper); color: var(--text-main); box-shadow: var(--shadow); }
+.view-btn svg { width: 16px; height: 16px; }
+
+/* === Stream View (Hacker News style) === */
+.stream-view { display: flex; flex-direction: column; }
+.stream-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+  transition: all 0.12s;
+}
+.stream-item:last-child { border-bottom: none; }
+.stream-item:hover { background: rgba(0,0,0,0.01); padding-left: 6px; padding-right: 6px; border-radius: 8px; }
+:root[data-theme='dark'] .stream-item:hover { background: rgba(255,255,255,0.02); }
+
+.stream-num {
+  font-size: 14px; font-weight: 700; color: var(--text-tertiary); font-family: var(--font-mono);
+  width: 28px; text-align: right; flex-shrink: 0; padding-top: 2px;
+}
+.stream-body { flex: 1; min-width: 0; }
+.stream-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.stream-title {
+  font-size: 14.5px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: color 0.12s;
+}
+.stream-title:hover { color: var(--accent); }
+.stream-cat {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px; flex-shrink: 0;
+}
+.stream-cat--policy { background: var(--red-soft); color: var(--red); }
+.stream-cat--practice { background: var(--teal-soft); color: var(--teal); }
+.stream-cat--research { background: var(--purple-soft); color: var(--purple); }
+.stream-cat--industry { background: var(--orange-soft); color: var(--orange); }
+
+.stream-excerpt {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.stream-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--text-tertiary);
+}
+.stream-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+.stream-meta .source-name { font-weight: 600; color: var(--text-secondary); }
+
+.stream-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-top: 2px;
+}
+.stream-time { font-size: 11.5px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.stream-link {
+  font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+  border: 1px solid var(--line); color: var(--text-tertiary); text-decoration: none;
+  transition: all 0.12s;
+}
+.stream-link:hover { border-color: var(--accent); color: var(--accent); }
+
+/* === Magazine View (The Verge style) === */
+.mag-view { display: flex; flex-direction: column; gap: 16px; }
+
+/* Hero card */
+.mag-hero {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  overflow: hidden; cursor: pointer; transition: all 0.15s;
+}
+.mag-hero:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.mag-hero-img {
+  width: 100%; height: 200px; background: linear-gradient(135deg, var(--accent-soft), var(--purple-soft));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; opacity: 0.6;
+}
+.mag-hero-body { padding: 18px 22px; }
+.mag-hero-cat {
+  display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 9px;
+  border-radius: 5px; margin-bottom: 8px;
+}
+.mag-hero-title { font-size: 20px; font-weight: 750; line-height: 1.35; letter-spacing: -0.02em; margin-bottom: 8px; }
+.mag-hero-excerpt { font-size: 13.5px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 10px; }
+.mag-hero-meta {
+  display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-tertiary);
+}
+.mag-hero-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+
+/* Card grid */
+.mag-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;
+}
+.mag-card {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.mag-card:hover {
+  border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-1px);
+}
+.mag-card-cat {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 5px; width: fit-content;
+}
+.mag-card-title {
+  font-size: 14.5px; font-weight: 650; line-height: 1.4; letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.mag-card-excerpt {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.mag-card-meta {
+  display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-tertiary);
+  margin-top: auto;
+}
+.mag-card-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+
+/* Section divider */
+.mag-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+
+.dash-footer {
+  padding: 32px 0; text-align: center; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--line); margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 68px 16px 36px; }
+  .mag-grid { grid-template-columns: 1fr; }
+  .daily-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="switcher-label">📰 AI 资讯</span>
+  <button class="switcher-theme" onclick="toggleTheme()" title="切换主题">◐</button>
+</div>
+
+<div class="page-container">
+  <div class="section-title">AI 资讯</div>
+
+  <!-- Daily header -->
+  <div class="daily-header">
+    <div class="daily-header-icon">📰</div>
+    <div class="daily-header-info">
+      <div class="daily-header-title">每日资讯速览</div>
+      <div class="daily-header-sub">全球AI政策动态 + 各领域AI实践 · 每日自动更新</div>
+    </div>
+    <div class="daily-header-stats">
+      <span>今日 <strong>12</strong> 条</span>
+      <span>来源 <strong>6</strong> 个</span>
+    </div>
+  </div>
+
+  <!-- Category tabs -->
+  <div class="cat-tabs">
+    <button class="cat-tab active" onclick="switchTab(this)">全部</button>
+    <button class="cat-tab" onclick="switchTab(this)">AI 政策</button>
+    <button class="cat-tab" onclick="switchTab(this)">行业实践</button>
+    <button class="cat-tab" onclick="switchTab(this)">技术突破</button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-left">按时间倒序</span>
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="switchView('stream', this)" title="信息流视图">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="view-btn" onclick="switchView('mag', this)" title="杂志视图">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="5" height="13" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="9.5" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stream View -->
+  <div id="stream-view" class="stream-view">
+    <div class="stream-item">
+      <span class="stream-num">1</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">欧盟AI法案正式执行：高风险AI系统必须在6个月内完成合规审查</span>
+          <span class="stream-cat stream-cat--policy">AI政策</span>
+        </div>
+        <div class="stream-excerpt">欧盟委员会宣布AI法案高风险条款正式生效，所有在欧盟运营的高风险AI系统需在6个月内完成合规审查，违规企业最高可处全球营业额7%的罚款。</div>
+        <div class="stream-meta">
+          <span class="source-name">Reuters</span>
+          <span class="sep"></span>
+          <span>欧洲</span>
+          <span class="sep"></span>
+          <span>3小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">14:30</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="stream-item">
+      <span class="stream-num">2</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">Google DeepMind 发布 Gemini 2.5：原生多模态推理能力大幅提升</span>
+          <span class="stream-cat stream-cat--industry">行业动态</span>
+        </div>
+        <div class="stream-excerpt">Gemini 2.5 Pro在数学推理、代码生成和多模态理解三项基准上均超越GPT-4o，首次实现百万token上下文窗口的稳定输出。</div>
+        <div class="stream-meta">
+          <span class="source-name">TechCrunch</span>
+          <span class="sep"></span>
+          <span>美国</span>
+          <span class="sep"></span>
+          <span>5小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">12:15</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="stream-item">
+      <span class="stream-num">3</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">FDA批准首个AI驱动的实时手术辅助系统，可在术中识别解剖结构</span>
+          <span class="stream-cat stream-cat--practice">行业实践</span>
+        </div>
+        <div class="stream-excerpt">该系统利用计算机视觉实时分析手术画面，标记关键血管和神经，降低手术风险。临床试验显示并发症发生率降低23%。</div>
+        <div class="stream-meta">
+          <span class="source-name">Nature Medicine</span>
+          <span class="sep"></span>
+          <span>美国</span>
+          <span class="sep"></span>
+          <span>8小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">08:45</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="stream-item">
+      <span class="stream-num">4</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">中国发布《生成式AI服务管理办法》修订版，放宽训练数据要求</span>
+          <span class="stream-cat stream-cat--policy">AI政策</span>
+        </div>
+        <div class="stream-excerpt">修订版取消了训练数据必须全部来自国内的要求，改为"关键数据不出境"原则，同时简化了备案流程，预计将加速国产大模型迭代。</div>
+        <div class="stream-meta">
+          <span class="source-name">新华社</span>
+          <span class="sep"></span>
+          <span>中国</span>
+          <span class="sep"></span>
+          <span>10小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">06:20</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="stream-item">
+      <span class="stream-num">5</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">AI辅助蛋白质设计首次进入临床：Insilico Medicine抗纤维化药物完成II期试验</span>
+          <span class="stream-cat stream-cat--practice">行业实践</span>
+        </div>
+        <div class="stream-excerpt">由AI从头设计的小分子药物INS018_055在特发性肺纤维化II期临床中达到主要终点，FVC指标改善显著优于安慰剂。</div>
+        <div class="stream-meta">
+          <span class="source-name">STAT News</span>
+          <span class="sep"></span>
+          <span>全球</span>
+          <span class="sep"></span>
+          <span>12小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">04:10</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+
+    <div class="stream-item">
+      <span class="stream-num">6</span>
+      <div class="stream-body">
+        <div class="stream-title-row">
+          <span class="stream-title">Anthropic推出Claude Enterprise：支持500K上下文+SSO+审计日志</span>
+          <span class="stream-cat stream-cat--industry">行业动态</span>
+        </div>
+        <div class="stream-excerpt">面向企业客户的Claude版本，支持50万token上下文窗口，集成SSO和完整的审计日志功能，定价与OpenAI Enterprise竞争。</div>
+        <div class="stream-meta">
+          <span class="source-name">The Verge</span>
+          <span class="sep"></span>
+          <span>美国</span>
+          <span class="sep"></span>
+          <span>14小时前</span>
+        </div>
+      </div>
+      <div class="stream-side">
+        <span class="stream-time">02:30</span>
+        <a class="stream-link" href="#">原文</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Magazine View -->
+  <div id="mag-view" class="mag-view" style="display:none;">
+    <!-- Hero -->
+    <div class="mag-hero">
+      <div class="mag-hero-img">📰</div>
+      <div class="mag-hero-body">
+        <span class="mag-hero-cat stream-cat--policy">AI政策</span>
+        <div class="mag-hero-title">欧盟AI法案正式执行：高风险AI系统必须在6个月内完成合规审查</div>
+        <div class="mag-hero-excerpt">欧盟委员会宣布AI法案高风险条款正式生效，所有在欧盟运营的高风险AI系统需在6个月内完成合规审查，违规企业最高可处全球营业额7%的罚款。这一里程碑标志着全球最严格的AI监管框架进入实质性执行阶段。</div>
+        <div class="mag-hero-meta">
+          <span>Reuters</span>
+          <span class="sep"></span>
+          <span>欧洲</span>
+          <span class="sep"></span>
+          <span>3小时前</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: 行业动态 -->
+    <div class="mag-section-label">行业动态</div>
+    <div class="mag-grid">
+      <div class="mag-card">
+        <span class="mag-card-cat stream-cat--industry">行业动态</span>
+        <div class="mag-card-title">Google DeepMind 发布 Gemini 2.5：原生多模态推理能力大幅提升</div>
+        <div class="mag-card-excerpt">Gemini 2.5 Pro在数学推理、代码生成和多模态理解三项基准上均超越GPT-4o。</div>
+        <div class="mag-card-meta">
+          <span>TechCrunch</span>
+          <span class="sep"></span>
+          <span>5小时前</span>
+        </div>
+      </div>
+      <div class="mag-card">
+        <span class="mag-card-cat stream-cat--industry">行业动态</span>
+        <div class="mag-card-title">Anthropic推出Claude Enterprise：支持500K上下文+SSO</div>
+        <div class="mag-card-excerpt">面向企业客户的Claude版本，支持50万token上下文窗口，集成SSO和审计日志。</div>
+        <div class="mag-card-meta">
+          <span>The Verge</span>
+          <span class="sep"></span>
+          <span>14小时前</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: 行业实践 -->
+    <div class="mag-section-label">行业实践</div>
+    <div class="mag-grid">
+      <div class="mag-card">
+        <span class="mag-card-cat stream-cat--practice">行业实践</span>
+        <div class="mag-card-title">FDA批准首个AI驱动的实时手术辅助系统</div>
+        <div class="mag-card-excerpt">利用计算机视觉实时分析手术画面，标记关键血管和神经，临床试验并发症降低23%。</div>
+        <div class="mag-card-meta">
+          <span>Nature Medicine</span>
+          <span class="sep"></span>
+          <span>8小时前</span>
+        </div>
+      </div>
+      <div class="mag-card">
+        <span class="mag-card-cat stream-cat--practice">行业实践</span>
+        <div class="mag-card-title">AI辅助蛋白质设计首次进入临床</div>
+        <div class="mag-card-excerpt">Insilico Medicine抗纤维化药物完成II期试验，FVC指标改善显著优于安慰剂。</div>
+        <div class="mag-card-meta">
+          <span>STAT News</span>
+          <span class="sep"></span>
+          <span>12小时前</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: AI政策 -->
+    <div class="mag-section-label">AI 政策</div>
+    <div class="mag-grid">
+      <div class="mag-card">
+        <span class="mag-card-cat stream-cat--policy">AI政策</span>
+        <div class="mag-card-title">中国发布《生成式AI服务管理办法》修订版</div>
+        <div class="mag-card-excerpt">修订版取消训练数据必须全部来自国内的要求，改为"关键数据不出境"原则。</div>
+        <div class="mag-card-meta">
+          <span>新华社</span>
+          <span class="sep"></span>
+          <span>10小时前</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+</div>
+
+<script>
+function switchView(mode, btn) {
+  document.getElementById('stream-view').style.display = mode === 'stream' ? 'flex' : 'none';
+  document.getElementById('mag-view').style.display = mode === 'mag' ? 'flex' : 'none';
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  localStorage.setItem('news-view', mode);
+}
+function switchTab(btn) {
+  btn.parentElement.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark';
+}
+const saved = localStorage.getItem('news-view');
+if (saved === 'mag') document.querySelector('.view-btn:last-child').click();
+</script>
+</body>
+</html>

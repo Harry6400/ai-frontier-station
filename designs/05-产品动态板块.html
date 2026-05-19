@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品动态板块 — 设计稿 v2</title>
+<style>
+:root {
+  color-scheme: light; font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #151a24; background-color: #f6f7f3;
+  --canvas: #f6f7f3; --paper: #ffffff;
+  --line: rgba(17, 24, 39, 0.09); --line-strong: rgba(17, 24, 39, 0.18);
+  --text-main: #151a24; --text-secondary: #566072; --text-tertiary: #8490a3;
+  --accent: #2563EB; --accent-soft: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px; --radius-sm: 10px;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", monospace;
+  --green: #059669; --green-soft: rgba(5, 150, 105, 0.08);
+  --orange: #D97706; --orange-soft: rgba(217, 119, 6, 0.08);
+  --purple: #7C3AED; --purple-soft: rgba(124, 58, 237, 0.08);
+  --red: #DC2626; --red-soft: rgba(220, 38, 38, 0.08);
+  --teal: #0D9488; --teal-soft: rgba(13, 148, 136, 0.08);
+  --pink: #DB2777; --pink-soft: rgba(219, 39, 119, 0.08);
+  --indigo: #4F46E5; --indigo-soft: rgba(79, 70, 229, 0.08);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark; color: #e8eef8; background-color: #0a111d;
+  --canvas: #0a111d; --paper: #111b2a;
+  --line: rgba(153, 171, 201, 0.16); --line-strong: rgba(153, 171, 201, 0.28);
+  --text-main: #edf3fe; --text-secondary: #afbed5; --text-tertiary: #8997ad;
+  --accent: #93C5FD; --accent-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 0 rgba(240,246,252,0.03), 0 18px 42px rgba(1,4,9,0.32);
+  --green: #34D399; --green-soft: rgba(52, 211, 153, 0.12);
+  --orange: #FBBF24; --orange-soft: rgba(251, 191, 36, 0.12);
+  --purple: #A78BFA; --purple-soft: rgba(167, 139, 250, 0.12);
+  --red: #F87171; --red-soft: rgba(248, 113, 113, 0.12);
+  --teal: #2DD4BF; --teal-soft: rgba(45, 212, 191, 0.12);
+  --pink: #F472B6; --pink-soft: rgba(244, 114, 182, 0.12);
+  --indigo: #818CF8; --indigo-soft: rgba(129, 140, 248, 0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: inherit; color: var(--text-main); background: var(--canvas); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.switcher-label { font-weight: 700; color: var(--text-secondary); margin-right: 8px; }
+.switcher-theme {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.page-container { max-width: 920px; margin: 0 auto; padding: 68px 32px 48px; }
+.section-title { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* Header */
+.page-header {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  padding: 16px 22px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 14px;
+}
+.page-header-icon {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.page-header-info { flex: 1; }
+.page-header-title { font-size: 15px; font-weight: 700; }
+.page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+.page-header-stats {
+  display: flex; gap: 14px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.page-header-stats strong { color: var(--accent); font-weight: 700; }
+
+/* AI weekly summary */
+.ai-weekly {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.ai-weekly-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.ai-weekly-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.ai-weekly-title { font-size: 13px; font-weight: 600; }
+.ai-weekly-text {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+}
+.ai-weekly-text strong { color: var(--text-main); font-weight: 600; }
+
+/* Product chips strip (horizontal, scrollable, filterable) */
+.product-strip {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+}
+.product-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--paper); font-size: 12.5px; font-weight: 600;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+  white-space: nowrap;
+}
+.product-chip:hover { border-color: var(--line-strong); color: var(--text-main); }
+.product-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.product-chip-logo { font-size: 14px; }
+.product-chip-count {
+  font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+  background: rgba(0,0,0,0.05); color: var(--text-tertiary);
+}
+.product-chip.active .product-chip-count { background: rgba(37,99,235,0.15); color: var(--accent); }
+
+/* Module type filter tabs */
+.type-tabs {
+  display: flex; gap: 2px; background: var(--canvas); border-radius: 10px; padding: 3px;
+  border: 1px solid var(--line); width: fit-content; margin-bottom: 16px;
+}
+.type-tab {
+  padding: 6px 14px; border-radius: 8px; border: 0; background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-tertiary);
+  cursor: pointer; transition: all 0.15s;
+}
+.type-tab:hover { color: var(--text-main); }
+.type-tab.active { background: var(--paper); color: var(--text-main); box-shadow: var(--shadow); }
+
+/* Feed list */
+.feed { display: flex; flex-direction: column; }
+.feed-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+  transition: all 0.12s;
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-item:hover { background: rgba(0,0,0,0.01); padding-left: 6px; padding-right: 6px; border-radius: 8px; }
+:root[data-theme='dark'] .feed-item:hover { background: rgba(255,255,255,0.02); }
+
+.feed-dot-col {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 36px; flex-shrink: 0; padding-top: 3px;
+}
+.feed-product-logo { font-size: 18px; }
+.feed-dot {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--line-strong);
+}
+
+.feed-body { flex: 1; min-width: 0; }
+.feed-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.feed-title {
+  font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: color 0.12s;
+}
+.feed-title:hover { color: var(--accent); }
+.feed-type {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px; flex-shrink: 0;
+}
+.feed-type--model { background: var(--accent-soft); color: var(--accent); }
+.feed-type--product { background: var(--green-soft); color: var(--green); }
+.feed-type--coding { background: var(--purple-soft); color: var(--purple); }
+.feed-type--ide { background: var(--pink-soft); color: var(--pink); }
+.feed-type--api { background: var(--orange-soft); color: var(--orange); }
+.feed-type--pricing { background: var(--teal-soft); color: var(--teal); }
+
+.feed-product-tag {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  background: var(--indigo-soft); color: var(--indigo); flex-shrink: 0;
+}
+
+.feed-desc {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.feed-meta {
+  display: flex; align-items: center; gap: 10px; margin-top: 4px;
+  font-size: 11.5px; color: var(--text-tertiary);
+}
+.feed-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+
+.feed-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-top: 2px;
+}
+.feed-time { font-size: 11.5px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.feed-link {
+  font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+  border: 1px solid var(--line); color: var(--text-tertiary); text-decoration: none;
+  transition: all 0.12s;
+}
+.feed-link:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Day divider */
+.feed-day {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0; margin-top: 8px;
+}
+.feed-day-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--text-tertiary); white-space: nowrap;
+}
+.feed-day-line { flex: 1; height: 1px; background: var(--line); }
+
+.dash-footer {
+  padding: 32px 0; text-align: center; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--line); margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 68px 16px 36px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .product-strip { gap: 4px; }
+  .product-chip { padding: 5px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="switcher-label">⚡ 产品动态</span>
+  <button class="switcher-theme" onclick="toggleTheme()" title="切换主题">◐</button>
+</div>
+
+<div class="page-container">
+  <div class="section-title">产品动态</div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-header-icon">⚡</div>
+    <div class="page-header-info">
+      <div class="page-header-title">产品动态速览</div>
+      <div class="page-header-sub">AI 公司 & 产品的模型、API、编程工具、IDE 最新动态</div>
+    </div>
+    <div class="page-header-stats">
+      <span>本周 <strong>27</strong> 条</span>
+      <span>关注 <strong>10</strong> 个产品</span>
+    </div>
+  </div>
+
+  <!-- AI weekly summary -->
+  <div class="ai-weekly">
+    <div class="ai-weekly-head">
+      <span class="ai-weekly-badge">✦ AI 周报</span>
+      <span class="ai-weekly-title">本周要点</span>
+    </div>
+    <div class="ai-weekly-text">
+      本周最大看点是<strong>模型降价潮</strong>：OpenAI GPT-4o降价30%、DeepSeek API降价40%，大模型价格战持续升级。
+      编程工具方面，<strong>Claude Code</strong>支持MCP协议扩展工具能力，<strong>Codex CLI</strong>开源后社区贡献活跃。
+      IDE领域<strong>Cursor v0.48</strong>和<strong>Trae Solo</strong>双双更新，AI原生IDE竞争白热化。
+      国产方面，<strong>Qwen-2.5-VL</strong>视觉语言模型发布，<strong>豆包</strong>新增长文档分析功能。
+    </div>
+  </div>
+
+  <!-- Product filter chips -->
+  <div class="product-strip">
+    <button class="product-chip active" onclick="toggleChip(this)" data-product="all">
+      全部
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="claude">
+      <span class="product-chip-logo">🤖</span>Claude
+      <span class="product-chip-count">3</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="chatgpt">
+      <span class="product-chip-logo">🟢</span>ChatGPT
+      <span class="product-chip-count">3</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="gemini">
+      <span class="product-chip-logo">🔵</span>Gemini
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="deepseek">
+      <span class="product-chip-logo">🐋</span>DeepSeek
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="qwen">
+      <span class="product-chip-logo">☁️</span>Qwen
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="glm">
+      <span class="product-chip-logo">💡</span>GLM
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="doubao">
+      <span class="product-chip-logo">🫘</span>豆包
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="trae">
+      <span class="product-chip-logo">⚡</span>Trae
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="opencode">
+      <span class="product-chip-logo">📝</span>OpenCode
+      <span class="product-chip-count">1</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="hermes">
+      <span class="product-chip-logo">🔮</span>Hermes Agent
+      <span class="product-chip-count">1</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="cursor">
+      <span class="product-chip-logo">🎯</span>Cursor
+      <span class="product-chip-count">2</span>
+    </button>
+    <button class="product-chip" onclick="toggleChip(this)" data-product="ollama">
+      <span class="product-chip-logo">🦙</span>Ollama
+      <span class="product-chip-count">1</span>
+    </button>
+  </div>
+
+  <!-- Module type filter -->
+  <div class="type-tabs">
+    <button class="type-tab active" onclick="switchType(this)">全部类型</button>
+    <button class="type-tab" onclick="switchType(this)">模型</button>
+    <button class="type-tab" onclick="switchType(this)">API/产品</button>
+    <button class="type-tab" onclick="switchType(this)">编程工具</button>
+    <button class="type-tab" onclick="switchType(this)">IDE</button>
+    <button class="type-tab" onclick="switchType(this)">价格/套餐</button>
+  </div>
+
+  <!-- Feed -->
+  <div class="feed">
+    <!-- 今天 -->
+    <div class="feed-day">
+      <span class="feed-day-label">今天 · 5月18日</span>
+      <span class="feed-day-line"></span>
+    </div>
+
+    <div class="feed-item" data-product="gemini" data-type="model">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🔵</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Gemini 2.5 Pro 正式发布：百万token上下文 + 原生多模态推理</span>
+          <span class="feed-type feed-type--model">模型</span>
+          <span class="feed-product-tag">Gemini</span>
+        </div>
+        <div class="feed-desc">在数学推理、代码生成和多模态理解三项基准上均超越GPT-4o，首次实现百万token上下文窗口的稳定输出。</div>
+        <div class="feed-meta">
+          <span>Google DeepMind</span>
+          <span class="sep"></span>
+          <span>来源：官方博客</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">14:30</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="claude" data-type="coding">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🤖</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Claude Code 正式支持 MCP 协议，可连接外部工具和数据源</span>
+          <span class="feed-type feed-type--coding">编程工具</span>
+          <span class="feed-product-tag">Claude</span>
+        </div>
+        <div class="feed-desc">通过MCP扩展工具调用能力，支持连接数据库、API和自定义工具。开发者可在Claude Code中直接查询数据库、调用外部服务。</div>
+        <div class="feed-meta">
+          <span>Anthropic</span>
+          <span class="sep"></span>
+          <span>来源：官方文档</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">11:20</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="trae" data-type="ide">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">⚡</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Trae Solo 模式更新：支持多文件并行编辑 + 自动Git提交</span>
+          <span class="feed-type feed-type--ide">IDE</span>
+          <span class="feed-product-tag">Trae</span>
+        </div>
+        <div class="feed-desc">Solo模式新增多文件并行编辑能力，Agent可同时修改多个文件并自动创建Git提交，工作流更完整。</div>
+        <div class="feed-meta">
+          <span>字节跳动</span>
+          <span class="sep"></span>
+          <span>来源：更新日志</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">09:00</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <!-- 昨天 -->
+    <div class="feed-day">
+      <span class="feed-day-label">昨天 · 5月17日</span>
+      <span class="feed-day-line"></span>
+    </div>
+
+    <div class="feed-item" data-product="chatgpt" data-type="product">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🟢</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">ChatGPT Canvas 协作模式正式上线</span>
+          <span class="feed-type feed-type--product">API/产品</span>
+          <span class="feed-product-tag">ChatGPT</span>
+        </div>
+        <div class="feed-desc">支持多人实时协作编辑文档和代码，类似Google Docs体验。团队成员可在同一Canvas中与AI协作。</div>
+        <div class="feed-meta">
+          <span>OpenAI</span>
+          <span class="sep"></span>
+          <span>来源：官方公告</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">18:40</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="deepseek" data-type="model">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🐋</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">DeepSeek-V3.1 发布：数学推理提升4%，HumanEval达91.2%</span>
+          <span class="feed-type feed-type--model">模型</span>
+          <span class="feed-product-tag">DeepSeek</span>
+        </div>
+        <div class="feed-desc">小版本更新但性能提升明显，在代码生成基准HumanEval上首次突破91%，逼近GPT-4o水平。</div>
+        <div class="feed-meta">
+          <span>DeepSeek</span>
+          <span class="sep"></span>
+          <span>来源：HuggingFace</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">15:10</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="hermes" data-type="product">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🔮</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Hermes Agent v2.0 发布：新增 MCP 原生支持 + 多 Agent 编排</span>
+          <span class="feed-type feed-type--product">API/产品</span>
+          <span class="feed-product-tag">Hermes</span>
+        </div>
+        <div class="feed-desc">2.0版本原生集成MCP协议，支持多Agent并行编排和任务委派，新增Skill系统和Cron定时任务。</div>
+        <div class="feed-meta">
+          <span>Nous Research</span>
+          <span class="sep"></span>
+          <span>来源：GitHub</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">12:00</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="opencode" data-type="coding">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">📝</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">OpenCode v1.2：新增 Plan Mode + 多模型切换</span>
+          <span class="feed-type feed-type--coding">编程工具</span>
+          <span class="feed-product-tag">OpenCode</span>
+        </div>
+        <div class="feed-desc">新增Plan模式先规划后执行，支持在对话中切换不同LLM模型，优化了Go重构后的内存占用。</div>
+        <div class="feed-meta">
+          <span>OpenCode</span>
+          <span class="sep"></span>
+          <span>来源：GitHub Releases</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">10:30</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <!-- 前天 -->
+    <div class="feed-day">
+      <span class="feed-day-label">5月16日</span>
+      <span class="feed-day-line"></span>
+    </div>
+
+    <div class="feed-item" data-product="chatgpt" data-type="api">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🟢</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">GPT-4o API 价格下调 30%：输入 $2.5/M tokens</span>
+          <span class="feed-type feed-type--api">API</span>
+          <span class="feed-product-tag">ChatGPT</span>
+        </div>
+        <div class="feed-desc">面对DeepSeek和Qwen的价格竞争，OpenAI大幅下调GPT-4o API定价，性价比显著提升。</div>
+        <div class="feed-meta">
+          <span>OpenAI</span>
+          <span class="sep"></span>
+          <span>来源：API文档</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">16:20</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="cursor" data-type="ide">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🎯</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Cursor v0.48：内置 Claude 3.5 Sonnet 优化，补全速度提升 30%</span>
+          <span class="feed-type feed-type--ide">IDE</span>
+          <span class="feed-product-tag">Cursor</span>
+        </div>
+        <div class="feed-desc">针对Claude 3.5 Sonnet模型深度优化，代码补全延迟从800ms降至560ms，Tab补全准确率提升。</div>
+        <div class="feed-meta">
+          <span>Cursor</span>
+          <span class="sep"></span>
+          <span>来源：更新日志</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">14:00</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="doubao" data-type="product">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🫘</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">豆包新增长文档分析功能：支持单次上传 200 页 PDF</span>
+          <span class="feed-type feed-type--product">API/产品</span>
+          <span class="feed-product-tag">豆包</span>
+        </div>
+        <div class="feed-desc">豆包App新增长文档分析能力，单次可上传200页PDF进行全文摘要、问答和关键信息提取。</div>
+        <div class="feed-meta">
+          <span>字节跳动</span>
+          <span class="sep"></span>
+          <span>来源：产品更新</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">11:30</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="qwen" data-type="model">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">☁️</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Qwen-2.5-VL 发布：视觉语言模型，支持视频理解和 OCR</span>
+          <span class="feed-type feed-type--model">模型</span>
+          <span class="feed-product-tag">Qwen</span>
+        </div>
+        <div class="feed-desc">通义千问团队发布视觉语言模型Qwen-2.5-VL，支持图像理解、视频分析和高精度OCR识别。</div>
+        <div class="feed-meta">
+          <span>阿里云</span>
+          <span class="sep"></span>
+          <span>来源：HuggingFace</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">09:00</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <!-- 价格/套餐更新 -->
+    <div class="feed-item" data-product="chatgpt" data-type="pricing">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🟢</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">OpenAI API 定价一览：GPT-4o 降价后各模型最新价格对比</span>
+          <span class="feed-type feed-type--pricing">价格/套餐</span>
+          <span class="feed-product-tag">ChatGPT</span>
+        </div>
+        <div class="feed-desc">GPT-4o 输入 $2.5/M tokens（↓30%），输出 $10/M；GPT-4o-mini 输入 $0.15/M，输出 $0.60/M；o1 输入 $15/M，输出 $60/M。</div>
+        <div class="feed-meta">
+          <span>OpenAI</span>
+          <span class="sep"></span>
+          <span>来源：API定价页</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">05-16</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="claude" data-type="pricing">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🤖</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">Claude 订阅套餐对比：Free / Pro / Team / Enterprise 功能与价格</span>
+          <span class="feed-type feed-type--pricing">价格/套餐</span>
+          <span class="feed-product-tag">Claude</span>
+        </div>
+        <div class="feed-desc">Pro $20/月（5倍用量），Team $25/人/月（协作+管理），Enterprise 自定义定价（SSO+审计+500K上下文）。</div>
+        <div class="feed-meta">
+          <span>Anthropic</span>
+          <span class="sep"></span>
+          <span>来源：定价页</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">05-15</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="deepseek" data-type="pricing">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">🐋</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">DeepSeek API 价格下调 40%：输入 $0.14/M tokens，目前最具性价比</span>
+          <span class="feed-type feed-type--pricing">价格/套餐</span>
+          <span class="feed-product-tag">DeepSeek</span>
+        </div>
+        <div class="feed-desc">DeepSeek-V3 输入 $0.14/M tokens，输出 $0.28/M。对比 GPT-4o 便宜 18 倍，对比 Claude 3.5 便宜 21 倍。</div>
+        <div class="feed-meta">
+          <span>DeepSeek</span>
+          <span class="sep"></span>
+          <span>来源：API定价页</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">05-14</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+
+    <div class="feed-item" data-product="qwen" data-type="pricing">
+      <div class="feed-dot-col">
+        <span class="feed-product-logo">☁️</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-title-row">
+          <span class="feed-title">阿里百炼 DashScope 最新定价：Qwen-Max ¥0.02/千tokens，MiMo 免费额度</span>
+          <span class="feed-type feed-type--pricing">价格/套餐</span>
+          <span class="feed-product-tag">Qwen</span>
+        </div>
+        <div class="feed-desc">Qwen-Max ¥0.02/千tokens，Qwen-Plus ¥0.008/千tokens。MiMo 模型目前提供每日免费调用额度。</div>
+        <div class="feed-meta">
+          <span>阿里云</span>
+          <span class="sep"></span>
+          <span>来源：百炼定价页</span>
+        </div>
+      </div>
+      <div class="feed-side">
+        <span class="feed-time">05-13</span>
+        <a class="feed-link" href="#">详情</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+</div>
+
+<script>
+// Product chip filter (single select)
+function toggleChip(btn) {
+  const product = btn.dataset.product;
+  document.querySelectorAll('.product-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  filterFeed();
+}
+
+// Type tab filter
+function switchType(btn) {
+  btn.parentElement.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  filterFeed();
+}
+
+function filterFeed() {
+  const activeProduct = document.querySelector('.product-chip.active')?.dataset.product || 'all';
+  const activeType = document.querySelector('.type-tab.active')?.textContent || '全部类型';
+  const typeMap = { '全部类型': 'all', '模型': 'model', 'API/产品': 'product', '编程工具': 'coding', 'IDE': 'ide', 'API': 'api' };
+  const typeFilter = typeMap[activeType] || 'all';
+
+  document.querySelectorAll('.feed-item').forEach(item => {
+    const matchProduct = activeProduct === 'all' || item.dataset.product === activeProduct;
+    const matchType = typeFilter === 'all' || item.dataset.type === typeFilter;
+    item.style.display = (matchProduct && matchType) ? 'flex' : 'none';
+  });
+
+  // Show/hide day dividers
+  document.querySelectorAll('.feed-day').forEach(day => {
+    let next = day.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('feed-day')) {
+      if (next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    day.style.display = hasVisible ? 'flex' : 'none';
+  });
+}
+
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark';
+}
+</script>
+</body>
+</html>

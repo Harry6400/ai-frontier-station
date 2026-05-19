@@ -304,7 +304,7 @@ onMounted(() => {
     <div class="candidate-table-wrap">
       <el-table
         :data="candidateList"
-        v-loading="loading"
+        v-show="!loading"
         stripe
         highlight-current-row
         style="width: 100%"
@@ -364,7 +364,7 @@ onMounted(() => {
       class="cd-dialog"
       @close="selectedCandidate = null"
     >
-      <div v-loading="detailLoading" class="cd-body">
+      <div class="cd-body">
         <template v-if="selectedCandidate">
           <!-- header -->
           <div class="cd-header">

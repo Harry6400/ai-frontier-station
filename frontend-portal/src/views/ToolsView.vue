@@ -156,9 +156,7 @@ function formatNum(n) {
               </div>
               <div class="item-excerpt">{{ item.excerpt }}</div>
               <div class="item-footer">
-                <span class="engagement">❤️ {{ formatNum(item.likes) }}</span>
-                <span class="engagement">🔁 {{ formatNum(item.retweets) }}</span>
-                <span class="engagement">💬 {{ formatNum(item.comments) }}</span>
+
                 <span class="item-time">{{ item.time }}</span>
                 <span class="item-link">阅读全文 →</span>
               </div>

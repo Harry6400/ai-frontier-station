@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模型评测板块 — 设计稿</title>
+<style>
+:root {
+  color-scheme: light; font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #151a24; background-color: #f6f7f3;
+  --canvas: #f6f7f3; --paper: #ffffff;
+  --line: rgba(17, 24, 39, 0.09); --line-strong: rgba(17, 24, 39, 0.18);
+  --text-main: #151a24; --text-secondary: #566072; --text-tertiary: #8490a3;
+  --accent: #2563EB; --accent-soft: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px; --radius-sm: 10px;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", monospace;
+  --green: #059669; --green-soft: rgba(5, 150, 105, 0.08);
+  --orange: #D97706; --orange-soft: rgba(217, 119, 6, 0.08);
+  --purple: #7C3AED; --purple-soft: rgba(124, 58, 237, 0.08);
+  --red: #DC2626; --red-soft: rgba(220, 38, 38, 0.08);
+  --teal: #0D9488; --teal-soft: rgba(13, 148, 136, 0.08);
+  --gold: #B45309; --gold-soft: rgba(180, 83, 9, 0.08);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark; color: #e8eef8; background-color: #0a111d;
+  --canvas: #0a111d; --paper: #111b2a;
+  --line: rgba(153, 171, 201, 0.16); --line-strong: rgba(153, 171, 201, 0.28);
+  --text-main: #edf3fe; --text-secondary: #afbed5; --text-tertiary: #8997ad;
+  --accent: #93C5FD; --accent-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 0 rgba(240,246,252,0.03), 0 18px 42px rgba(1,4,9,0.32);
+  --green: #34D399; --green-soft: rgba(52, 211, 153, 0.12);
+  --orange: #FBBF24; --orange-soft: rgba(251, 191, 36, 0.12);
+  --purple: #A78BFA; --purple-soft: rgba(167, 139, 250, 0.12);
+  --red: #F87171; --red-soft: rgba(248, 113, 113, 0.12);
+  --teal: #2DD4BF; --teal-soft: rgba(45, 212, 191, 0.12);
+  --gold: #F59E0B; --gold-soft: rgba(245, 158, 11, 0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: inherit; color: var(--text-main); background: var(--canvas); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.switcher-label { font-weight: 700; color: var(--text-secondary); margin-right: 8px; }
+.switcher-theme {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.page-container { max-width: 920px; margin: 0 auto; padding: 68px 32px 48px; }
+.section-title { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* Header */
+.page-header {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  padding: 16px 22px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 14px;
+}
+.page-header-icon {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--gold-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.page-header-info { flex: 1; }
+.page-header-title { font-size: 15px; font-weight: 700; }
+.page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+.page-header-stats {
+  display: flex; gap: 14px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.page-header-stats strong { color: var(--accent); font-weight: 700; }
+
+/* Source tabs */
+.source-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 20px;
+}
+.source-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border: 0; background: transparent;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text-tertiary);
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.source-tab:hover { color: var(--text-main); }
+.source-tab.active { color: var(--text-main); border-bottom-color: var(--accent); }
+.source-tab-logo { font-size: 16px; }
+.source-tab-badge {
+  font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+  background: var(--green-soft); color: var(--green); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.source-tab-badge--coming {
+  background: rgba(0,0,0,0.04); color: var(--text-tertiary);
+}
+:root[data-theme='dark'] .source-tab-badge--coming { background: rgba(255,255,255,0.06); }
+
+/* AI summary */
+.ai-summary {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.ai-summary-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.ai-summary-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.ai-summary-title { font-size: 13px; font-weight: 600; }
+.ai-summary-text {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+}
+.ai-summary-text strong { color: var(--text-main); font-weight: 600; }
+
+/* Chart card */
+.chart-card {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  overflow: hidden; margin-bottom: 16px; transition: border-color 0.15s;
+}
+.chart-card:hover { border-color: var(--line-strong); }
+.chart-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+}
+.chart-card-head-left { display: flex; align-items: center; gap: 10px; }
+.chart-card-title { font-size: 14.5px; font-weight: 650; }
+.chart-card-tag {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
+  background: var(--green-soft); color: var(--green);
+}
+.chart-card-date { font-size: 11.5px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.chart-card-body { padding: 0; }
+
+/* Chart placeholder (simulated chart area) */
+.chart-area {
+  width: 100%; height: 320px; position: relative; overflow: hidden;
+  background: linear-gradient(180deg, rgba(37,99,235,0.03) 0%, transparent 100%);
+  display: flex; align-items: flex-end; padding: 0 20px 20px; gap: 0;
+}
+.chart-bar-group {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  max-width: 80px;
+}
+.chart-bar {
+  width: 100%; border-radius: 6px 6px 0 0; transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative; cursor: pointer; min-width: 28px;
+}
+.chart-bar:hover { opacity: 0.85; }
+.chart-bar-label {
+  position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 700; font-family: var(--font-mono); white-space: nowrap;
+}
+.chart-bar-name {
+  font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px;
+}
+
+/* Ranking table (below chart) */
+.ranking-table {
+  border-top: 1px solid var(--line);
+}
+.ranking-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; border-bottom: 1px solid var(--line);
+  transition: all 0.12s;
+}
+.ranking-row:last-child { border-bottom: none; }
+.ranking-row:hover { background: rgba(0,0,0,0.01); }
+:root[data-theme='dark'] .ranking-row:hover { background: rgba(255,255,255,0.02); }
+
+.ranking-pos {
+  font-size: 14px; font-weight: 700; font-family: var(--font-mono);
+  width: 28px; text-align: right; flex-shrink: 0;
+}
+.ranking-pos.gold { color: #B45309; }
+.ranking-pos.silver { color: #6B7280; }
+.ranking-pos.bronze { color: #92400E; }
+.ranking-name { font-size: 13.5px; font-weight: 600; flex: 1; min-width: 0; }
+.ranking-org { font-size: 11.5px; color: var(--text-tertiary); min-width: 80px; }
+.ranking-elo {
+  font-size: 14px; font-weight: 700; font-family: var(--font-mono); min-width: 50px; text-align: right;
+}
+.ranking-change {
+  font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+  padding: 1px 6px; border-radius: 4px; min-width: 40px; text-align: center;
+}
+.ranking-change.up { background: var(--green-soft); color: var(--green); }
+.ranking-change.down { background: var(--red-soft); color: var(--red); }
+.ranking-change.same { color: var(--text-tertiary); }
+.ranking-votes {
+  font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono);
+  min-width: 60px; text-align: right;
+}
+
+/* Category chips */
+.category-chips {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+}
+.category-chip {
+  padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--paper); font-size: 12.5px; font-weight: 600;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+}
+.category-chip:hover { border-color: var(--line-strong); color: var(--text-main); }
+.category-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+/* Coming soon cards */
+.coming-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
+  margin-top: 20px;
+}
+.coming-card {
+  border: 1px dashed var(--line); border-radius: var(--radius-sm);
+  padding: 20px; text-align: center; opacity: 0.6;
+}
+.coming-card-icon { font-size: 28px; margin-bottom: 8px; }
+.coming-card-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.coming-card-desc { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; }
+
+.dash-footer {
+  padding: 32px 0; text-align: center; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--line); margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 68px 16px 36px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .chart-area { height: 220px; padding: 0 10px 10px; }
+  .chart-bar-name { font-size: 9px; max-width: 50px; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="switcher-label">🏆 模型评测</span>
+  <button class="switcher-theme" onclick="toggleTheme()" title="切换主题">◐</button>
+</div>
+
+<div class="page-container">
+  <div class="section-title">模型评测</div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-header-icon">🏆</div>
+    <div class="page-header-info">
+      <div class="page-header-title">模型评测追踪</div>
+      <div class="page-header-sub">聚合各大评测平台数据，每日更新最受关注的模型排名和趋势</div>
+    </div>
+    <div class="page-header-stats">
+      <span>数据源 <strong>1</strong> 个</span>
+      <span>更新于 <strong>今天 09:00</strong></span>
+    </div>
+  </div>
+
+  <!-- Source tabs -->
+  <div class="source-tabs">
+    <button class="source-tab active" onclick="switchSource(this, 'arena')">
+      <span class="source-tab-logo">🏟️</span>Chatbot Arena
+      <span class="source-tab-badge">每日更新</span>
+    </button>
+    <button class="source-tab" onclick="switchSource(this, 'opencompass')">
+      <span class="source-tab-logo">📊</span>OpenCompass
+      <span class="source-tab-badge source-tab-badge--coming">即将接入</span>
+    </button>
+    <button class="source-tab" onclick="switchSource(this, 'alpaca')">
+      <span class="source-tab-logo">🦙</span>AlpacaEval
+      <span class="source-tab-badge source-tab-badge--coming">即将接入</span>
+    </button>
+  </div>
+
+  <!-- Arena Panel -->
+  <div id="panel-arena">
+    <!-- AI summary -->
+    <div class="ai-summary">
+      <div class="ai-summary-head">
+        <span class="ai-summary-badge">✦ AI 解读</span>
+        <span class="ai-summary-title">今日 Arena 要点</span>
+      </div>
+      <div class="ai-summary-text">
+        <strong>Gemini 2.5 Pro</strong>首次登顶Arena总榜，ELO 1342分，超越GPT-4o（1338）和Claude 3.5 Sonnet（1335）。
+        值得关注的是<strong>DeepSeek-V3</strong>以1310分进入前5，成为首个进入Top 5的中国模型。
+        编程子榜中Claude 3.5 Sonnet仍保持领先（1389），但Gemini 2.5 Pro差距缩小至12分。
+      </div>
+    </div>
+
+    <!-- Category chips -->
+    <div class="category-chips">
+      <button class="category-chip active" onclick="switchCat(this)">总榜</button>
+      <button class="category-chip" onclick="switchCat(this)">编程</button>
+      <button class="category-chip" onclick="switchCat(this)">数学</button>
+      <button class="category-chip" onclick="switchCat(this)">创意写作</button>
+      <button class="category-chip" onclick="switchCat(this)">中文</button>
+      <button class="category-chip" onclick="switchCat(this)">多模态</button>
+    </div>
+
+    <!-- Chart: ELO Rankings -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <div class="chart-card-head-left">
+          <span class="chart-card-title">ELO 排名 Top 10</span>
+          <span class="chart-card-tag">实时数据</span>
+        </div>
+        <span class="chart-card-date">2026-05-18</span>
+      </div>
+      <div class="chart-card-body">
+        <div class="chart-area" id="elo-chart">
+          <!-- Bars rendered by JS -->
+        </div>
+        <div class="ranking-table" id="ranking-table">
+          <!-- Rows rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart: Trend (simulated) -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <div class="chart-card-head-left">
+          <span class="chart-card-title">Top 5 模型 ELO 趋势（近30天）</span>
+          <span class="chart-card-tag">趋势图</span>
+        </div>
+        <span class="chart-card-date">2026-05-18</span>
+      </div>
+      <div class="chart-card-body">
+        <div style="padding:20px; position:relative; height:280px;">
+          <svg width="100%" height="100%" viewBox="0 0 800 240" preserveAspectRatio="none" style="display:block;">
+            <!-- Grid lines -->
+            <line x1="0" y1="0" x2="800" y2="0" stroke="var(--line)" stroke-width="1"/>
+            <line x1="0" y1="60" x2="800" y2="60" stroke="var(--line)" stroke-width="1"/>
+            <line x1="0" y1="120" x2="800" y2="120" stroke="var(--line)" stroke-width="1"/>
+            <line x1="0" y1="180" x2="800" y2="180" stroke="var(--line)" stroke-width="1"/>
+            <line x1="0" y1="240" x2="800" y2="240" stroke="var(--line)" stroke-width="1"/>
+
+            <!-- Gemini 2.5 Pro (gold) - rising -->
+            <polyline fill="none" stroke="#B45309" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+              points="0,180 80,170 160,155 240,140 320,120 400,100 480,80 560,50 640,30 720,15 800,5"/>
+            <!-- GPT-4o (green) - stable -->
+            <polyline fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              points="0,20 80,18 160,22 240,15 320,20 400,18 480,22 560,20 640,18 720,20 800,18"/>
+            <!-- Claude 3.5 (purple) - stable -->
+            <polyline fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              points="0,25 80,28 160,22 240,25 320,28 400,22 480,25 560,28 640,22 720,25 800,22"/>
+            <!-- DeepSeek V3 (teal) - rising -->
+            <polyline fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              points="0,120 80,110 160,95 240,85 320,70 400,60 480,50 560,42 640,35 720,30 800,28"/>
+            <!-- Llama 3.1 (orange) - stable -->
+            <polyline fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              points="0,55 80,52 160,58 240,55 320,50 400,52 480,55 560,52 640,50 720,52 800,50"/>
+
+            <!-- End labels -->
+            <text x="805" y="9" fill="#B45309" font-size="10" font-weight="600" font-family="inherit">Gemini</text>
+            <text x="805" y="22" fill="#059669" font-size="10" font-weight="600" font-family="inherit">GPT-4o</text>
+            <text x="805" y="26" fill="#7C3AED" font-size="10" font-weight="600" font-family="inherit">Claude</text>
+            <text x="805" y="32" fill="#0D9488" font-size="10" font-weight="600" font-family="inherit">DeepSeek</text>
+            <text x="805" y="54" fill="#D97706" font-size="10" font-weight="600" font-family="inherit">Llama</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenCompass Panel (hidden) -->
+  <div id="panel-opencompass" style="display:none;">
+    <div class="coming-grid">
+      <div class="coming-card">
+        <div class="coming-card-icon">📊</div>
+        <div class="coming-card-title">OpenCompass</div>
+        <div class="coming-card-desc">上海AI Lab 综合评测榜单，覆盖50+基准测试</div>
+      </div>
+      <div class="coming-card">
+        <div class="coming-card-icon">🔧</div>
+        <div class="coming-card-title">接入中</div>
+        <div class="coming-card-desc">正在对接API，预计下周上线</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AlpacaEval Panel (hidden) -->
+  <div id="panel-alpaca" style="display:none;">
+    <div class="coming-grid">
+      <div class="coming-card">
+        <div class="coming-card-icon">🦙</div>
+        <div class="coming-card-title">AlpacaEval</div>
+        <div class="coming-card-desc">斯坦福指令跟随能力评测，LC Win Rate 指标</div>
+      </div>
+      <div class="coming-card">
+        <div class="coming-card-icon">🔧</div>
+        <div class="coming-card-title">规划中</div>
+        <div class="coming-card-desc">待确定数据获取方式</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+</div>
+
+<script>
+// ELO data
+const models = [
+  { name: 'Gemini 2.5 Pro', org: 'Google', elo: 1342, change: +8, votes: '24.5k', color: '#B45309' },
+  { name: 'GPT-4o', org: 'OpenAI', elo: 1338, change: -2, votes: '89.2k', color: '#059669' },
+  { name: 'Claude 3.5 Sonnet', org: 'Anthropic', elo: 1335, change: +1, votes: '67.8k', color: '#7C3AED' },
+  { name: 'DeepSeek-V3', org: 'DeepSeek', elo: 1310, change: +12, votes: '18.3k', color: '#0D9488' },
+  { name: 'Llama 3.1 405B', org: 'Meta', elo: 1298, change: 0, votes: '45.1k', color: '#D97706' },
+  { name: 'Qwen-2.5 72B', org: 'Alibaba', elo: 1285, change: +5, votes: '12.7k', color: '#DC2626' },
+  { name: 'Mistral Large 2', org: 'Mistral', elo: 1278, change: -3, votes: '21.4k', color: '#4F46E5' },
+  { name: 'GLM-4-Plus', org: 'Zhipu', elo: 1265, change: +2, votes: '8.9k', color: '#DB2777' },
+  { name: 'Command R+', org: 'Cohere', elo: 1258, change: -1, votes: '15.6k', color: '#6B7280' },
+  { name: 'Yi-Lightning', org: '01.AI', elo: 1250, change: +3, votes: '6.2k', color: '#F59E0B' },
+];
+
+// Render chart bars
+const maxElo = Math.max(...models.map(m => m.elo));
+const minElo = Math.min(...models.map(m => m.elo)) - 30;
+const chartArea = document.getElementById('elo-chart');
+models.forEach(m => {
+  const pct = ((m.elo - minElo) / (maxElo - minElo)) * 0.85 + 0.1;
+  const h = pct * 280;
+  const group = document.createElement('div');
+  group.className = 'chart-bar-group';
+  group.innerHTML = `
+    <div class="chart-bar" style="height:${h}px; background:${m.color};">
+      <span class="chart-bar-label" style="color:${m.color}">${m.elo}</span>
+    </div>
+    <span class="chart-bar-name">${m.name.split(' ')[0]}</span>
+  `;
+  chartArea.appendChild(group);
+});
+
+// Render ranking table
+const table = document.getElementById('ranking-table');
+models.forEach((m, i) => {
+  const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+  const changeClass = m.change > 0 ? 'up' : m.change < 0 ? 'down' : 'same';
+  const changeText = m.change > 0 ? `+${m.change}` : m.change < 0 ? `${m.change}` : '—';
+  const row = document.createElement('div');
+  row.className = 'ranking-row';
+  row.innerHTML = `
+    <span class="ranking-pos ${posClass}">${i + 1}</span>
+    <span class="ranking-name">${m.name}</span>
+    <span class="ranking-org">${m.org}</span>
+    <span class="ranking-elo">${m.elo}</span>
+    <span class="ranking-change ${changeClass}">${changeText}</span>
+    <span class="ranking-votes">${m.votes}票</span>
+  `;
+  table.appendChild(row);
+});
+
+function switchSource(btn, id) {
+  document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  document.getElementById('panel-' + id).style.display = 'block';
+}
+function switchCat(btn) {
+  btn.parentElement.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub板块 — 设计稿</title>
+<style>
+:root {
+  color-scheme: light; font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #151a24; background-color: #f6f7f3;
+  --canvas: #f6f7f3; --paper: #ffffff;
+  --line: rgba(17, 24, 39, 0.09); --line-strong: rgba(17, 24, 39, 0.18);
+  --text-main: #151a24; --text-secondary: #566072; --text-tertiary: #8490a3;
+  --accent: #2563EB; --accent-soft: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 0 rgba(31,35,40,0.04), 0 12px 30px rgba(31,35,40,0.06);
+  --radius: 16px; --radius-sm: 10px;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", monospace;
+  --green: #059669; --green-soft: rgba(5, 150, 105, 0.08);
+  --orange: #D97706; --orange-soft: rgba(217, 119, 6, 0.08);
+  --purple: #7C3AED; --purple-soft: rgba(124, 58, 237, 0.08);
+  --red: #DC2626; --red-soft: rgba(220, 38, 38, 0.08);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark; color: #e8eef8; background-color: #0a111d;
+  --canvas: #0a111d; --paper: #111b2a;
+  --line: rgba(153, 171, 201, 0.16); --line-strong: rgba(153, 171, 201, 0.28);
+  --text-main: #edf3fe; --text-secondary: #afbed5; --text-tertiary: #8997ad;
+  --accent: #93C5FD; --accent-soft: rgba(147, 197, 253, 0.12);
+  --shadow: 0 1px 0 rgba(240,246,252,0.03), 0 18px 42px rgba(1,4,9,0.32);
+  --green: #34D399; --green-soft: rgba(52, 211, 153, 0.12);
+  --orange: #FBBF24; --orange-soft: rgba(251, 191, 36, 0.12);
+  --purple: #A78BFA; --purple-soft: rgba(167, 139, 250, 0.12);
+  --red: #F87171; --red-soft: rgba(248, 113, 113, 0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: inherit; color: var(--text-main); background: var(--canvas); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+/* Switcher */
+.switcher {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.switcher-label { font-weight: 700; color: var(--text-secondary); margin-right: 8px; }
+.switcher-theme {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+.page-container { max-width: 900px; margin: 0 auto; padding: 68px 32px 48px; }
+.section-title { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* Week header */
+.week-header {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+  padding: 18px 22px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 16px;
+}
+.week-header-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+}
+.week-header-info { flex: 1; }
+.week-header-title { font-size: 16px; font-weight: 700; }
+.week-header-sub { font-size: 12.5px; color: var(--text-tertiary); margin-top: 2px; }
+.week-header-stats {
+  display: flex; gap: 16px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.week-header-stats strong { color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
+
+/* AI summary block */
+.ai-summary {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 14px 18px; margin-bottom: 16px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.ai-summary-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent); flex-shrink: 0; margin-top: 2px;
+}
+.ai-summary-text {
+  font-size: 13.5px; color: var(--text-secondary); line-height: 1.7;
+}
+.ai-summary-text strong { color: var(--text-main); font-weight: 600; }
+
+/* Toolbar */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+}
+.toolbar-left { font-size: 12px; color: var(--text-tertiary); font-weight: 600; }
+.view-toggle {
+  display: flex; gap: 2px; background: var(--canvas); border-radius: 8px; padding: 3px;
+  border: 1px solid var(--line);
+}
+.view-btn {
+  width: 32px; height: 28px; border-radius: 6px; border: 0; background: transparent;
+  color: var(--text-tertiary); cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.view-btn:hover { color: var(--text-main); }
+.view-btn.active { background: var(--paper); color: var(--text-main); box-shadow: var(--shadow); }
+.view-btn svg { width: 16px; height: 16px; }
+
+/* === List View === */
+.list-view { display: flex; flex-direction: column; }
+.list-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+  transition: all 0.12s;
+}
+.list-row:last-child { border-bottom: none; }
+.list-row:hover { background: rgba(0,0,0,0.01); padding-left: 6px; padding-right: 6px; border-radius: 8px; }
+:root[data-theme='dark'] .list-row:hover { background: rgba(255,255,255,0.02); }
+
+.list-rank {
+  font-size: 14px; font-weight: 700; color: var(--text-tertiary); font-family: var(--font-mono);
+  width: 28px; text-align: right; flex-shrink: 0; padding-top: 2px;
+}
+.list-rank.top3 { color: var(--accent); }
+
+.list-content { flex: 1; min-width: 0; }
+.list-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.list-title {
+  font-size: 14.5px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: color 0.12s;
+}
+.list-title:hover { color: var(--accent); }
+.list-lang {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  background: var(--green-soft); color: var(--green); flex-shrink: 0;
+}
+.list-desc {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.list-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--text-tertiary);
+}
+.list-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+
+.list-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; padding-top: 2px;
+}
+.list-star-growth {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 700; color: var(--orange); font-family: var(--font-mono);
+}
+.list-star-growth .arrow { font-size: 11px; }
+.list-total-stars {
+  font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono);
+}
+
+/* === Grid View === */
+.grid-view {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px;
+}
+.grid-card {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  transition: all 0.15s; cursor: pointer;
+}
+.grid-card:hover {
+  border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-1px);
+}
+.grid-card-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.grid-card-rank {
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+  background: var(--accent-soft); color: var(--accent); font-family: var(--font-mono);
+}
+.grid-card-stars {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; color: var(--orange); font-family: var(--font-mono);
+}
+.grid-card-title-row { display: flex; align-items: center; gap: 8px; }
+.grid-card-title { font-size: 15px; font-weight: 650; line-height: 1.4; }
+.grid-card-lang {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 5px;
+  background: var(--green-soft); color: var(--green); flex-shrink: 0;
+}
+.grid-card-desc {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.grid-card-impl {
+  font-size: 11.5px; color: var(--text-tertiary); line-height: 1.55;
+  padding: 8px 10px; border-radius: 6px; background: rgba(0,0,0,0.02);
+}
+:root[data-theme='dark'] .grid-card-impl { background: rgba(255,255,255,0.03); }
+.grid-card-impl strong { color: var(--text-secondary); font-weight: 600; }
+.grid-card-bottom {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto;
+}
+.grid-card-topic { display: flex; gap: 4px; flex-wrap: wrap; }
+.grid-card-tag {
+  font-size: 10px; padding: 2px 7px; border-radius: 5px;
+  border: 1px solid var(--line); color: var(--text-tertiary); font-weight: 500;
+}
+.grid-card-link {
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 5px;
+  background: var(--accent); color: #fff; text-decoration: none; transition: opacity 0.12s;
+}
+.grid-card-link:hover { opacity: 0.85; }
+
+/* Footer */
+.dash-footer {
+  padding: 32px 0; text-align: center; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--line); margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 68px 16px 36px; }
+  .grid-view { grid-template-columns: 1fr; }
+  .week-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="switcher-label">🐙 GitHub 开源</span>
+  <button class="switcher-theme" onclick="toggleTheme()" title="切换主题">◐</button>
+</div>
+
+<div class="page-container">
+  <div class="section-title">GitHub 开源</div>
+
+  <!-- Week header -->
+  <div class="week-header">
+    <div class="week-header-icon">🐙</div>
+    <div class="week-header-info">
+      <div class="week-header-title">本周 Top 10 星标增长</div>
+      <div class="week-header-sub">每周一自动更新 · 来源 GitHub Trending + Star History</div>
+    </div>
+    <div class="week-header-stats">
+      <span>周期 <strong>05.12 – 05.18</strong></span>
+      <span>总计 <strong>+28.4k ★</strong></span>
+    </div>
+  </div>
+
+  <!-- AI summary -->
+  <div class="ai-summary">
+    <span class="ai-summary-badge">✦ AI 总结</span>
+    <div class="ai-summary-text">
+      本周热门项目集中在<strong>AI Agent框架</strong>和<strong>本地推理优化</strong>两个方向。OpenAI 开源的 Codex CLI 周增星标最多（+8.2k），
+      反映开发者对终端AI编程工具的强烈需求。vLLM 和 Ollama 持续霸榜，本地大模型部署仍是社区核心关注点。
+      值得注意的是，<strong>browser-use</strong>（浏览器自动化Agent）和<strong>Dify</strong>（低代码AI平台）首次进入Top 10，
+      说明AI应用层工具正在快速崛起。
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-left">按星标增长排序</span>
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="switchView('list', this)" title="列表视图">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="view-btn" onclick="switchView('grid', this)" title="卡片视图">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div id="list-view" class="list-view">
+    <div class="list-row">
+      <span class="list-rank top3">1</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">openai/codex</span>
+          <span class="list-lang">Rust</span>
+        </div>
+        <div class="list-desc">轻量级终端AI编程助手，支持代码生成、解释和重构。在终端中直接运行，支持多种LLM后端。</div>
+        <div class="list-meta">
+          <span>OpenAI</span>
+          <span class="sep"></span>
+          <span>CLI工具 · AI编程</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +8,234</div>
+        <div class="list-total-stars">★ 42.1k</div>
+      </div>
+    </div>
+
+    <div class="list-row">
+      <span class="list-rank top3">2</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">vllm-project/vllm</span>
+          <span class="list-lang">Python</span>
+        </div>
+        <div class="list-desc">高吞吐量LLM推理引擎，支持PagedAttention和连续批处理。已成为大模型部署的事实标准。</div>
+        <div class="list-meta">
+          <span>UC Berkeley</span>
+          <span class="sep"></span>
+          <span>推理引擎 · LLM</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +5,102</div>
+        <div class="list-total-stars">★ 58.7k</div>
+      </div>
+    </div>
+
+    <div class="list-row">
+      <span class="list-rank top3">3</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">browser-use/browser-use</span>
+          <span class="list-lang">Python</span>
+        </div>
+        <div class="list-desc">让AI Agent控制浏览器的开源框架，支持网页导航、表单填写、数据提取等操作。</div>
+        <div class="list-meta">
+          <span>browser-use</span>
+          <span class="sep"></span>
+          <span>浏览器Agent · 自动化</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +4,876</div>
+        <div class="list-total-stars">★ 31.2k</div>
+      </div>
+    </div>
+
+    <div class="list-row">
+      <span class="list-rank">4</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">ollama/ollama</span>
+          <span class="list-lang">Go</span>
+        </div>
+        <div class="list-desc">本地运行大模型的最简方案，一行命令启动Llama 3、Mistral等模型，支持GPU加速。</div>
+        <div class="list-meta">
+          <span>Ollama</span>
+          <span class="sep"></span>
+          <span>本地推理 · 一键部署</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +3,541</div>
+        <div class="list-total-stars">★ 128k</div>
+      </div>
+    </div>
+
+    <div class="list-row">
+      <span class="list-rank">5</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">langgenius/dify</span>
+          <span class="list-lang">Python</span>
+        </div>
+        <div class="list-desc">开源LLM应用开发平台，提供RAG引擎、Agent编排、模型管理和Prompt IDE。</div>
+        <div class="list-meta">
+          <span>LangGenius</span>
+          <span class="sep"></span>
+          <span>AI平台 · 低代码</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +2,890</div>
+        <div class="list-total-stars">★ 67.3k</div>
+      </div>
+    </div>
+
+    <div class="list-row">
+      <span class="list-rank">6</span>
+      <div class="list-content">
+        <div class="list-title-row">
+          <span class="list-title">microsoft/autogen</span>
+          <span class="list-lang">Python</span>
+        </div>
+        <div class="list-desc">多Agent对话框架，支持Agent协作、代码执行和人机交互模式。</div>
+        <div class="list-meta">
+          <span>Microsoft</span>
+          <span class="sep"></span>
+          <span>多Agent · 对话</span>
+        </div>
+      </div>
+      <div class="list-side">
+        <div class="list-star-growth"><span class="arrow">▲</span> +2,105</div>
+        <div class="list-total-stars">★ 41.8k</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid View -->
+  <div id="grid-view" class="grid-view" style="display:none;">
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#1</span>
+        <span class="grid-card-stars">▲ +8,234 · ★ 42.1k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">openai/codex</span>
+        <span class="grid-card-lang">Rust</span>
+      </div>
+      <div class="grid-card-desc">轻量级终端AI编程助手，支持代码生成、解释和重构。在终端中直接运行，支持多种LLM后端。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>Rust编写CLI核心，通过API调用LLM，支持流式输出和本地文件上下文注入。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">CLI</span>
+          <span class="grid-card-tag">AI编程</span>
+          <span class="grid-card-tag">OpenAI</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#2</span>
+        <span class="grid-card-stars">▲ +5,102 · ★ 58.7k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">vllm-project/vllm</span>
+        <span class="grid-card-lang">Python</span>
+      </div>
+      <div class="grid-card-desc">高吞吐量LLM推理引擎，支持PagedAttention和连续批处理。已成为大模型部署的事实标准。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>基于PagedAttention的内存管理，连续批处理调度，支持Tensor并行和流水线并行。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">推理引擎</span>
+          <span class="grid-card-tag">LLM</span>
+          <span class="grid-card-tag">GPU</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#3</span>
+        <span class="grid-card-stars">▲ +4,876 · ★ 31.2k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">browser-use/browser-use</span>
+        <span class="grid-card-lang">Python</span>
+      </div>
+      <div class="grid-card-desc">让AI Agent控制浏览器的开源框架，支持网页导航、表单填写、数据提取等操作。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>基于Playwright驱动浏览器，LLM通过结构化指令控制页面元素，支持视觉理解。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">浏览器Agent</span>
+          <span class="grid-card-tag">自动化</span>
+          <span class="grid-card-tag">Playwright</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#4</span>
+        <span class="grid-card-stars">▲ +3,541 · ★ 128k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">ollama/ollama</span>
+        <span class="grid-card-lang">Go</span>
+      </div>
+      <div class="grid-card-desc">本地运行大模型的最简方案，一行命令启动Llama 3、Mistral等模型，支持GPU加速。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>Go编写核心运行时，GGUF格式量化推理，内置模型仓库和API服务。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">本地推理</span>
+          <span class="grid-card-tag">一键部署</span>
+          <span class="grid-card-tag">量化</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#5</span>
+        <span class="grid-card-stars">▲ +2,890 · ★ 67.3k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">langgenius/dify</span>
+        <span class="grid-card-lang">Python</span>
+      </div>
+      <div class="grid-card-desc">开源LLM应用开发平台，提供RAG引擎、Agent编排、模型管理和Prompt IDE。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>Flask后端 + React前端，插件化架构，支持自定义工具和外部API集成。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">AI平台</span>
+          <span class="grid-card-tag">低代码</span>
+          <span class="grid-card-tag">RAG</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+
+    <div class="grid-card">
+      <div class="grid-card-top">
+        <span class="grid-card-rank">#6</span>
+        <span class="grid-card-stars">▲ +2,105 · ★ 41.8k</span>
+      </div>
+      <div class="grid-card-title-row">
+        <span class="grid-card-title">microsoft/autogen</span>
+        <span class="grid-card-lang">Python</span>
+      </div>
+      <div class="grid-card-desc">多Agent对话框架，支持Agent协作、代码执行和人机交互模式。</div>
+      <div class="grid-card-impl"><strong>实现方式：</strong>基于对话的Agent编排，支持Docker沙箱代码执行，可扩展的工具注册机制。</div>
+      <div class="grid-card-bottom">
+        <div class="grid-card-topic">
+          <span class="grid-card-tag">多Agent</span>
+          <span class="grid-card-tag">对话</span>
+          <span class="grid-card-tag">Microsoft</span>
+        </div>
+        <a class="grid-card-link" href="#">访问仓库</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-footer">AI 前沿情报站 · 吴皓睿的个人 AI 信息雷达</footer>
+</div>
+
+<script>
+function switchView(mode, btn) {
+  document.getElementById('list-view').style.display = mode === 'list' ? 'flex' : 'none';
+  document.getElementById('grid-view').style.display = mode === 'grid' ? 'grid' : 'none';
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  localStorage.setItem('github-view', mode);
+}
+function toggleTheme() {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark';
+}
+// Restore view preference
+const saved = localStorage.getItem('github-view');
+if (saved === 'grid') {
+  document.querySelector('.view-btn:last-child').click();
+}
+</script>
+</body>
+</html>
