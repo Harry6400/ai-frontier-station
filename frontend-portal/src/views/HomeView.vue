@@ -172,7 +172,7 @@ onMounted(loadHome)
                     <p>{{ card.description }}</p>
                   </div>
                   
-                  <span v-else class="nav-chip-num">{{ getSectionCount(card.contentType) }}</span>
+                  <span class="nav-chip-num">{{ getSectionCount(card.contentType) }}</span>
                 </RouterLink>
               </div>
             </div>
