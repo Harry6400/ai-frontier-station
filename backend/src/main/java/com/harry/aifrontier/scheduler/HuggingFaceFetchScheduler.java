@@ -106,7 +106,6 @@ public class HuggingFaceFetchScheduler {
                                 paper.getTitle(), paper.getAbstractText());
                         updateContentSummary(paperId, "huggingface_paper", chineseSummary);
                         log.info("HuggingFace 中文摘要生成成功: {}", paperId);
-                        Thread.sleep(2000);
                     } catch (Exception se) {
                         log.warn("HuggingFace 中文摘要生成失败（不影响导入）: {} - {}", paperId, se.getMessage());
                     }

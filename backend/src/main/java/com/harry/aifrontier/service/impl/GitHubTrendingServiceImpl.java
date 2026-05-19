@@ -8,6 +8,7 @@ import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.service.ApiCredentialService;
 import com.harry.aifrontier.service.GitHubTrendingService;
+import com.harry.aifrontier.util.CandidateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -110,8 +111,12 @@ public class GitHubTrendingServiceImpl implements GitHubTrendingService {
                         continue;
                     }
 
-                    contentCandidateMapper.insert(candidate);
-                    count++;
+                    if (CandidateValidator.validate(candidate)) {
+                        contentCandidateMapper.insert(candidate);
+                        count++;
+                    } else {
+                        log.debug("数据质量验证未通过，跳过: {}", fullName);
+                    }
                     log.info("新增 GitHub AI 仓库: {} (score={}, stars={})",
                             fullName, trendScore, item.path("stargazers_count").asInt(0));
                 } catch (Exception e) {

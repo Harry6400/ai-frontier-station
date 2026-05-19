@@ -17,20 +17,19 @@
           <span class="stat-label">本周更新</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number">{{ products.length - 1 }}</span>
+          <span class="stat-number">{{ products.length ? products.length - 1 : 0 }}</span>
           <span class="stat-label">追踪产品</span>
         </div>
       </div>
     </header>
 
     <!-- AI Weekly Summary -->
-    <section class="ai-weekly">
-      <div class="weekly-badge">✦ AI 周报</div>
+    <section class="ai-weekly" v-if="latestItems.length">
+      <div class="weekly-badge">✦ 最新动态</div>
       <ul class="weekly-points">
-        <li>Gemini 2.5 Pro 正式发布，推理能力大幅提升</li>
-        <li>Claude Code 新增 MCP 协议支持，工具集成更灵活</li>
-        <li>DeepSeek V3.1 开源，中文理解能力再创新高</li>
-        <li>多家厂商调降 API 价格，AI 应用成本持续下降</li>
+        <li v-for="item in latestItems" :key="item.id">
+          <strong>{{ item.productName }}</strong>: {{ item.title }}
+        </li>
       </ul>
     </section>
 
@@ -98,72 +97,106 @@
         </template>
       </template>
     </div>
+
+    <PaginationBar
+      :total="total"
+      :page-size="pageSize"
+      :current-page="page"
+      @page-change="handlePageChange"
+    />
+
   </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import PortalTopbar from '../components/PortalTopbar.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 import { getContentByType } from '../api/portal'
-
-const products = [
-  { key: 'all', name: '全部', logo: '🌐' },
-  { key: 'claude', name: 'Claude', logo: '🤖' },
-  { key: 'chatgpt', name: 'ChatGPT', logo: '🟢' },
-  { key: 'gemini', name: 'Gemini', logo: '🔵' },
-  { key: 'deepseek', name: 'DeepSeek', logo: '🐋' },
-  { key: 'qwen', name: 'Qwen', logo: '☁️' },
-  { key: 'glm', name: 'GLM', logo: '💡' },
-  { key: 'doubao', name: '豆包', logo: '🫘' },
-  { key: 'trae', name: 'Trae', logo: '⚡' },
-  { key: 'opencode', name: 'OpenCode', logo: '📝' },
-  { key: 'hermes', name: 'Hermes Agent', logo: '🔮' },
-  { key: 'cursor', name: 'Cursor', logo: '🎯' },
-  { key: 'ollama', name: 'Ollama', logo: '🦙' },
-]
-
-const types = [
-  { key: 'all', name: '全部类型' },
-  { key: 'model', name: '模型' },
-  { key: 'api', name: 'API/产品' },
-  { key: 'coding', name: '编程工具' },
-  { key: 'ide', name: 'IDE' },
-  { key: 'pricing', name: '价格/套餐' },
-]
 
 const activeProduct = ref('all')
 const activeType = ref('all')
 const feedItems = ref([])
 const loading = ref(true)
 const error = ref(null)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
+function handlePageChange(p) { page.value = p; fetchData() }
 
 const typeBadgeMap = { model: '模型', api: 'API/产品', coding: '编程工具', ide: 'IDE', pricing: '价格/套餐' }
 const typeLabel = (t) => typeBadgeMap[t] || t
+
+// Computed: extract unique products from feed items
+const products = computed(() => {
+  const uniqueProducts = new Map()
+  uniqueProducts.set('all', { key: 'all', name: '全部', logo: '🌐' })
+  for (const item of feedItems.value) {
+    if (item.product && !uniqueProducts.has(item.product)) {
+      uniqueProducts.set(item.product, {
+        key: item.product,
+        name: item.productName || item.product,
+        logo: '📢'
+      })
+    }
+  }
+  return Array.from(uniqueProducts.values())
+})
+
+// Computed: extract unique types from feed items
+const types = computed(() => {
+  const uniqueTypes = new Map()
+  uniqueTypes.set('all', { key: 'all', name: '全部类型' })
+  for (const item of feedItems.value) {
+    if (item.type && !uniqueTypes.has(item.type)) {
+      const label = typeBadgeMap[item.type] || item.type
+      uniqueTypes.set(item.type, { key: item.type, name: label })
+    }
+  }
+  return Array.from(uniqueTypes.values())
+})
+
+// Computed: latest 3 items for summary
+const latestItems = computed(() => {
+  return feedItems.value.slice(0, 3)
+})
 
 async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const res = await getContentByType('company_update', { pageNum: 1, pageSize: 50 })
+    const res = await getContentByType('company_update', { pageNum: page.value, pageSize: pageSize.value })
     if (res.code === 200 && res.data?.records) {
-      feedItems.value = res.data.records.map(item => ({
-        id: item.id,
-        date: item.publishedAt?.slice(0, 10) || '',
-        product: (item.subCategory || 'other').toLowerCase(),
-        productName: item.subCategory || '通用',
-        logo: '📢',
-        title: item.title,
-        type: item.subCategory?.toLowerCase() || 'api',
-        description: item.summary || '',
-        company: item.authorName || item.sourceName || '',
-        source: item.sourceName || '',
-        sourceUrl: item.sourceUrl || ''
-      }))
+      total.value = res.data?.total || 0
+      feedItems.value = res.data.records.map(item => {
+        // Parse metadataJson to extract product and updateType
+        let metadata = {}
+        try {
+          metadata = item.metadataJson ? JSON.parse(item.metadataJson) : {}
+        } catch (e) {
+          metadata = {}
+        }
+        
+        return {
+          id: item.id,
+          date: item.publishedAt?.slice(0, 10) || '',
+          product: (metadata.product || item.subCategory || 'other').toLowerCase(),
+          productName: metadata.product || item.subCategory || '通用',
+          logo: '📢',
+          title: item.title,
+          type: (metadata.updateType || item.subCategory || 'api').toLowerCase(),
+          description: item.summary || '',
+          company: metadata.company || item.authorName || item.sourceName || '',
+          source: item.sourceName || '',
+          sourceUrl: item.sourceUrl || ''
+        }
+      })
     }
   } catch (e) {
     console.error('Failed to load company updates:', e)
@@ -215,6 +248,18 @@ function getProductCount(key) {
   if (key === 'all') return feedItems.value.length
   return feedItems.value.filter(i => i.product === key).length
 }
+
+// Reset filter if selected product/type no longer exists
+watch(products, (newProducts) => {
+  if (!newProducts.find(p => p.key === activeProduct.value)) {
+    activeProduct.value = 'all'
+  }
+})
+watch(types, (newTypes) => {
+  if (!newTypes.find(t => t.key === activeType.value)) {
+    activeType.value = 'all'
+  }
+})
 </script>
 
 <style scoped>

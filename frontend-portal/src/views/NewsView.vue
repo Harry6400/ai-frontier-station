@@ -5,6 +5,7 @@ import PortalTopbar from '../components/PortalTopbar.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 import { useViewMode, useTabs } from '../composables/useViewMode'
 import { getContentByType } from '../api/portal'
 
@@ -18,13 +19,19 @@ const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'nume
 const loading = ref(false)
 const error = ref(null)
 const newsItems = ref([])
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
+function handlePageChange(p) { page.value = p; fetchData() }
 
 async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const res = await getContentByType('news', { pageNum: 1, pageSize: 50 })
+    const res = await getContentByType('news', { pageNum: page.value, pageSize: pageSize.value })
     const data = res.data
+    total.value = data?.total || 0
     const records = data?.records || []
     newsItems.value = records.map((item, index) => ({
       id: item.id,
@@ -226,6 +233,13 @@ const groupedByCategory = computed(() => {
         </div>
       </div>
       </template>
+
+      <PaginationBar
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        @page-change="handlePageChange"
+      />
 
       <footer class="news-footer">
         AI 前沿情报站 · 每日 AI 资讯聚合

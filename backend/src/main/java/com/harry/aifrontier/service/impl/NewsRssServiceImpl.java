@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.service.NewsRssService;
+import com.harry.aifrontier.util.CandidateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -100,9 +101,13 @@ public class NewsRssServiceImpl implements NewsRssService {
                     candidate.setStatus("pending");
                     candidate.setMetadataJson(buildMetadataJson("techcrunch", null, null));
 
-                    contentCandidateMapper.insert(candidate);
-                    count++;
-                    log.info("新增 TechCrunch 新闻: {}", title);
+                    if (CandidateValidator.validate(candidate)) {
+                        contentCandidateMapper.insert(candidate);
+                        count++;
+                        log.info("新增 TechCrunch 新闻: {}", title);
+                    } else {
+                        log.debug("数据质量验证未通过，跳过: {}", title);
+                    }
                 } catch (Exception e) {
                     log.warn("处理 TechCrunch 文章出错: {}", e.getMessage());
                 }
@@ -203,9 +208,13 @@ public class NewsRssServiceImpl implements NewsRssService {
                     candidate.setStatus("pending");
                     candidate.setMetadataJson(buildMetadataJson("hackernews", score, descendants));
 
-                    contentCandidateMapper.insert(candidate);
-                    count++;
-                    log.info("新增 HN 新闻: {} (score={})", title, score);
+                    if (CandidateValidator.validate(candidate)) {
+                        contentCandidateMapper.insert(candidate);
+                        count++;
+                        log.info("新增 HN 新闻: {} (score={})", title, score);
+                    } else {
+                        log.debug("数据质量验证未通过，跳过: {}", title);
+                    }
                 } catch (Exception e) {
                     log.warn("处理 HN 故事出错: {}", e.getMessage());
                 }

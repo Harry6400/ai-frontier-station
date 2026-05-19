@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.service.ProductUpdateService;
+import com.harry.aifrontier.util.CandidateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -95,9 +96,13 @@ public class ProductUpdateServiceImpl implements ProductUpdateService {
                     candidate.setStatus("pending");
                     candidate.setMetadataJson(buildMetadataJson(productInfo, source.name));
 
-                    contentCandidateMapper.insert(candidate);
-                    count++;
-                    log.info("新增 {} 产品动态: {}", source.name, title);
+                    if (CandidateValidator.validate(candidate)) {
+                        contentCandidateMapper.insert(candidate);
+                        count++;
+                        log.info("新增 {} 产品动态: {}", source.name, title);
+                    } else {
+                        log.debug("数据质量验证未通过，跳过: {}", title);
+                    }
                 } catch (Exception e) {
                     log.warn("处理 {} 文章出错: {}", source.name, e.getMessage());
                 }

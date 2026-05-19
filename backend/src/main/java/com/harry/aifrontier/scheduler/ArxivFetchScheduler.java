@@ -98,7 +98,6 @@ public class ArxivFetchScheduler {
                                     paper.getTitle(), paper.getAbstractText());
                             updateContentSummary(arxivId, "arxiv_paper", chineseSummary);
                             log.info("[arXiv 定时采集] 中文摘要生成成功: {}", arxivId);
-                            Thread.sleep(2000);
                         } catch (Exception se) {
                             log.warn("[arXiv 定时采集] 中文摘要生成失败（不影响导入）: {} - {}", arxivId, se.getMessage());
                         }
@@ -117,14 +116,6 @@ public class ArxivFetchScheduler {
                 fetchLogService.log("arxiv", keyword, 0, 0, "FAILED", e.getMessage());
             }
 
-            // 关键词之间等待 3 秒，避免 arXiv 限流
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                log.warn("[arXiv 定时采集] 线程被中断，提前结束");
-                break;
-            }
         }
 
         log.info("[arXiv 定时采集] 执行完毕: totalFound={}, totalImported={}", totalFound, totalImported);

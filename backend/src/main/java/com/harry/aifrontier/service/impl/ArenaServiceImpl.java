@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.service.ArenaService;
+import com.harry.aifrontier.util.CandidateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -108,9 +109,14 @@ public class ArenaServiceImpl implements ArenaService {
             candidate.setMetadataJson("{}");
         }
 
-        contentCandidateMapper.insert(candidate);
-        log.info("新增 Arena 排行榜占位记录");
-        return 1;
+        if (CandidateValidator.validate(candidate)) {
+            contentCandidateMapper.insert(candidate);
+            log.info("新增 Arena 排行榜占位记录");
+            return 1;
+        } else {
+            log.debug("数据质量验证未通过，跳过 Arena 占位记录");
+            return 0;
+        }
     }
 
     private int createManualEntryCandidate() {
@@ -141,9 +147,14 @@ public class ArenaServiceImpl implements ArenaService {
             candidate.setMetadataJson("{}");
         }
 
-        contentCandidateMapper.insert(candidate);
-        log.warn("新增 Arena 排行榜手动更新占位记录");
-        return 1;
+        if (CandidateValidator.validate(candidate)) {
+            contentCandidateMapper.insert(candidate);
+            log.warn("新增 Arena 排行榜手动更新占位记录");
+            return 1;
+        } else {
+            log.debug("数据质量验证未通过，跳过 Arena 手动占位记录");
+            return 0;
+        }
     }
 
     private boolean existsByExternalId(String externalId) {

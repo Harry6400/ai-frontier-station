@@ -5,6 +5,7 @@ import PortalTopbar from '../components/PortalTopbar.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 import { getContentByType } from '../api/portal'
 
 const activeSource = ref('全部来源')
@@ -23,13 +24,19 @@ const types = ['全部类型', '使用指南', '工作流', '工具推荐', '行
 const loading = ref(false)
 const error = ref(null)
 const feedItems = ref([])
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
+function handlePageChange(p) { page.value = p; fetchData() }
 
 async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const res = await getContentByType('practice', { pageNum: 1, pageSize: 50 })
+    const res = await getContentByType('practice', { pageNum: page.value, pageSize: pageSize.value })
     const data = res.data
+    total.value = data?.total || 0
     const records = data?.records || []
     feedItems.value = records.map((item) => ({
       id: item.id,
@@ -172,6 +179,13 @@ function formatNum(n) {
           </RouterLink>
         </template>
       </div>
+
+      <PaginationBar
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        @page-change="handlePageChange"
+      />
     </div>
   </div>
 </template>

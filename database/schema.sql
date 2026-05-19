@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS ai_content_tag (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   UNIQUE KEY uk_ai_content_tag (content_id, tag_id),
   KEY idx_ai_content_tag_tag_id (tag_id),
-  CONSTRAINT fk_ai_content_tag_content FOREIGN KEY (content_id) REFERENCES ai_content (id),
-  CONSTRAINT fk_ai_content_tag_tag FOREIGN KEY (tag_id) REFERENCES ai_tag (id)
+  CONSTRAINT fk_ai_content_tag_content FOREIGN KEY (content_id) REFERENCES ai_content (id) ON DELETE CASCADE,
+  CONSTRAINT fk_ai_content_tag_tag FOREIGN KEY (tag_id) REFERENCES ai_tag (id) ON DELETE CASCADE
 ) COMMENT='内容标签关联表';
 
 CREATE TABLE IF NOT EXISTS ai_content_external_ref (
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS ai_content_external_ref (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   KEY idx_ai_ext_ref_content_id (content_id),
   KEY idx_ai_ext_ref_type (ref_type),
-  CONSTRAINT fk_ai_ext_ref_content FOREIGN KEY (content_id) REFERENCES ai_content (id)
+  CONSTRAINT fk_ai_ext_ref_content FOREIGN KEY (content_id) REFERENCES ai_content (id) ON DELETE CASCADE
 ) COMMENT='外部引用与后续同步预留表';
 
 CREATE TABLE IF NOT EXISTS ai_api_credential (

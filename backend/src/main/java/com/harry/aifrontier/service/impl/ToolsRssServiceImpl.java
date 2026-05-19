@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.service.ToolsRssService;
+import com.harry.aifrontier.util.CandidateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -118,9 +119,13 @@ public class ToolsRssServiceImpl implements ToolsRssService {
                     candidate.setStatus("pending");
                     candidate.setMetadataJson(buildMetadataJson(subreddit, upvotes, comments));
 
-                    contentCandidateMapper.insert(candidate);
-                    count++;
-                    log.info("新增 r/{} 帖子: {} (upvotes={})", subreddit, title, upvotes);
+                    if (CandidateValidator.validate(candidate)) {
+                        contentCandidateMapper.insert(candidate);
+                        count++;
+                        log.info("新增 r/{} 帖子: {} (upvotes={})", subreddit, title, upvotes);
+                    } else {
+                        log.debug("数据质量验证未通过，跳过: {}", title);
+                    }
                 } catch (Exception e) {
                     log.warn("处理 Reddit 帖子出错: {}", e.getMessage());
                 }

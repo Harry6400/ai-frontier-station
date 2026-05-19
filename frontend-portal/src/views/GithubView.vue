@@ -5,11 +5,15 @@ import PortalTopbar from '../components/PortalTopbar.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 import { getContentByType } from '../api/portal'
 
 const loading = ref(false)
 const error = ref(null)
 const repos = ref([])
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 
 const activeDirection = ref('全部')
 const activeSort = ref('趋势分')
@@ -66,12 +70,15 @@ const filteredRepos = computed(() => {
   return list
 })
 
+function handlePageChange(p) { page.value = p; fetchData() }
+
 async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const res = await getContentByType('project', { pageNum: 1, pageSize: 50 })
+    const res = await getContentByType('project', { pageNum: page.value, pageSize: pageSize.value })
     const data = res.data
+    total.value = data?.total || 0
     const records = data?.records || []
     repos.value = records.map(item => ({
       id: item.id,
@@ -206,6 +213,13 @@ onMounted(fetchData)
           </div>
         </RouterLink>
       </div>
+
+      <PaginationBar
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        @page-change="handlePageChange"
+      />
 
       <footer class="trend-footer">
         AI 前沿情报站 · Trend Board

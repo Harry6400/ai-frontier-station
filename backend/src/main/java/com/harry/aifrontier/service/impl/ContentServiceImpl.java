@@ -265,23 +265,37 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public HomeOverviewVO portalHome() {
         HomeOverviewVO vo = new HomeOverviewVO();
-        vo.setFeaturedContents(contentMapper.selectList(new LambdaQueryWrapper<Content>()
+        List<Content> featuredRaw = contentMapper.selectList(new LambdaQueryWrapper<Content>()
                         .eq(Content::getPublishStatus, "PUBLISHED")
                         .gt(Content::getFeaturedLevel, 0)
                         .orderByDesc(Content::getFeaturedLevel)
                         .orderByDesc(Content::getPublishedAt)
-                        .last("limit 6"))
-                .stream()
-                .map(this::toListItemVO)
-                .toList());
-        vo.setLatestContents(contentMapper.selectList(new LambdaQueryWrapper<Content>()
+                        .last("limit 6"));
+        List<Content> latestRaw = contentMapper.selectList(new LambdaQueryWrapper<Content>()
                         .eq(Content::getPublishStatus, "PUBLISHED")
                         .orderByDesc(Content::getPublishedAt)
                         .orderByDesc(Content::getId)
-                        .last("limit 8"))
-                .stream()
-                .map(this::toListItemVO)
+                        .last("limit 8"));
+
+        // Batch-fetch all categories and sources in a single query each (avoid N+1)
+        List<Content> allRaw = new ArrayList<>(featuredRaw);
+        allRaw.addAll(latestRaw);
+        Set<Long> catIds = allRaw.stream().map(Content::getCategoryId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> srcIds = allRaw.stream().map(Content::getSourceId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, Category> catMap = catIds.isEmpty() ? Collections.emptyMap() :
+                categoryMapper.selectBatchIds(catIds).stream()
+                        .collect(Collectors.toMap(Category::getId, c -> c, (l, r) -> l, java.util.LinkedHashMap::new));
+        Map<Long, Source> srcMap = srcIds.isEmpty() ? Collections.emptyMap() :
+                sourceMapper.selectBatchIds(srcIds).stream()
+                        .collect(Collectors.toMap(Source::getId, s -> s, (l, r) -> l, java.util.LinkedHashMap::new));
+
+        vo.setFeaturedContents(featuredRaw.stream()
+                .map(c -> toListItemVO(c, catMap, srcMap))
                 .toList());
+        vo.setLatestContents(latestRaw.stream()
+                .map(c -> toListItemVO(c, catMap, srcMap))
+                .toList());
+
         vo.setCategories(categoryMapper.selectList(new LambdaQueryWrapper<Category>()
                         .eq(Category::getIsEnabled, 1)
                         .orderByAsc(Category::getSortOrder)
@@ -346,16 +360,27 @@ public class ContentServiceImpl implements ContentService {
         if (page.getRecords().isEmpty()) {
             return PageResult.empty(page.getCurrent(), page.getSize());
         }
-        List<ContentAdminListItemVO> records = page.getRecords().stream()
+        List<Content> filtered = page.getRecords().stream()
                 .filter(content -> !publishedOnly || "PUBLISHED".equals(content.getPublishStatus()))
-                .map(this::toListItemVO)
+                .toList();
+        if (filtered.isEmpty()) {
+            return PageResult.empty(page.getCurrent(), page.getSize());
+        }
+        Set<Long> categoryIds = filtered.stream().map(Content::getCategoryId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> sourceIds = filtered.stream().map(Content::getSourceId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, Category> categoryMap = categoryIds.isEmpty() ? Collections.emptyMap() :
+                categoryMapper.selectBatchIds(categoryIds).stream()
+                        .collect(Collectors.toMap(Category::getId, c -> c, (left, right) -> left, java.util.LinkedHashMap::new));
+        Map<Long, Source> sourceMap = sourceIds.isEmpty() ? Collections.emptyMap() :
+                sourceMapper.selectBatchIds(sourceIds).stream()
+                        .collect(Collectors.toMap(Source::getId, s -> s, (left, right) -> left, java.util.LinkedHashMap::new));
+        List<ContentAdminListItemVO> records = filtered.stream()
+                .map(c -> toListItemVO(c, categoryMap, sourceMap))
                 .toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), records);
     }
 
-    private ContentAdminListItemVO toListItemVO(Content content) {
-        Map<Long, Category> categoryMap = findCategoryMap(List.of(content.getCategoryId()));
-        Map<Long, Source> sourceMap = findSourceMap(content.getSourceId() == null ? Collections.emptyList() : List.of(content.getSourceId()));
+    private ContentAdminListItemVO toListItemVO(Content content, Map<Long, Category> categoryMap, Map<Long, Source> sourceMap) {
         ContentAdminListItemVO vo = new ContentAdminListItemVO();
         BeanUtils.copyProperties(content, vo);
         Category category = categoryMap.get(content.getCategoryId());
