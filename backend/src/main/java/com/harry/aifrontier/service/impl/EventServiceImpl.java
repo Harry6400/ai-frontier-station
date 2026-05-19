@@ -16,10 +16,15 @@ import com.harry.aifrontier.service.EventService;
 import com.harry.aifrontier.vo.EventContentVO;
 import com.harry.aifrontier.vo.EventDetailVO;
 import com.harry.aifrontier.vo.EventListItemVO;
+import com.harry.aifrontier.service.ApiCredentialService;
+import com.harry.aifrontier.util.CryptoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -34,6 +39,16 @@ public class EventServiceImpl implements EventService {
     private final ContentEventLinkMapper linkMapper;
     private final ContentMapper contentMapper;
     private final ObjectMapper objectMapper;
+    private final ApiCredentialService apiCredentialService;
+
+    @Value("${app.bailian.api-key:}")
+    private String bailianFallbackKey;
+
+    @Value("${app.bailian.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}")
+    private String bailianBaseUrl;
+
+    @Value("${app.bailian.model:qwen-turbo}")
+    private String bailianModel;
 
     @Override
     public PageResult<EventListItemVO> listEvents(Integer pageNum, Integer pageSize) {
@@ -47,7 +62,7 @@ public class EventServiceImpl implements EventService {
                 .map(this::toListVO)
                 .toList();
 
-        return PageResult.of(result.getTotal(), pageNum, pageSize, records);
+        return PageResult.of(result.getTotal(), pageNum.longValue(), pageSize.longValue(), records);
     }
 
     @Override
@@ -133,33 +148,165 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public int autoCluster() {
-        // Simple keyword-based clustering
-        // Get all published contents that are not yet linked to any event
+        // AI-powered clustering: send content titles to LLM and ask it to group them
         List<Content> allContents = contentMapper.selectList(
                 new LambdaQueryWrapper<Content>()
                         .eq(Content::getPublishStatus, "PUBLISHED")
-                        .isNotNull(Content::getAiTags)
                         .orderByDesc(Content::getCreatedAt)
         );
 
-        // Get existing content-event links to skip already linked content
+        if (allContents.isEmpty()) return 0;
+
+        // Skip already linked contents
         Set<Long> linkedContentIds = linkMapper.selectList(null)
                 .stream()
                 .map(ContentEventLink::getContentId)
                 .collect(Collectors.toSet());
 
-        // Get existing events for matching
-        List<ContentEvent> existingEvents = eventMapper.selectList(null);
-
-        int newEventCount = 0;
-
-        // Group contents by overlapping keywords in title/tags
         List<Content> unlinkedContents = allContents.stream()
                 .filter(c -> !linkedContentIds.contains(c.getId()))
                 .toList();
 
-        // Simple approach: find contents with shared significant words in title
+        if (unlinkedContents.size() < 2) {
+            log.info("Not enough unlinked contents for clustering (need >= 2, have {})", unlinkedContents.size());
+            return 0;
+        }
+
+        // Build a numbered list of content titles for the AI
+        StringBuilder contentList = new StringBuilder();
+        for (int i = 0; i < unlinkedContents.size(); i++) {
+            Content c = unlinkedContents.get(i);
+            contentList.append(String.format("%d. [ID:%d] %s\n", i + 1, c.getId(),
+                    c.getTitle().length() > 100 ? c.getTitle().substring(0, 100) + "..." : c.getTitle()));
+        }
+
+        String apiKey = apiCredentialService.resolveBailianApiKey(bailianFallbackKey);
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("百炼 API Key 未配置，无法执行AI聚类");
+            return 0;
+        }
+
+        String prompt = "你是AI前沿情报站的内容分析助手。下面是一批AI领域的文章标题，请将它们按主题聚类成事件。\n\n" +
+                "规则：\n" +
+                "1. 只聚类确实相关的文章（同一公司/产品/技术方向）\n" +
+                "2. 不要强行聚类，如果某篇文章不属于任何事件，跳过它\n" +
+                "3. 每个事件至少包含2篇文章\n" +
+                "4. 用中文生成事件标题\n\n" +
+                "文章列表：\n" + contentList +
+                "\n请严格以JSON数组格式输出，不要添加其他内容：\n" +
+                "[{\"title\": \"事件标题\", \"contentIds\": [1, 3, 5]}, ...]";
+
+        try {
+            Map<String, Object> body = Map.of(
+                    "model", bailianModel,
+                    "messages", List.of(
+                            Map.of("role", "user", "content", prompt)
+                    ),
+                    "temperature", 0.1,
+                    "max_tokens", 2000
+            );
+
+            String response = RestClient.create(bailianBaseUrl)
+                    .post()
+                    .uri("/chat/completions")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            // Parse response
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(response);
+            String content = root.path("choices").path(0).path("message").path("content").asText("");
+
+            // Extract JSON from response (handle markdown code blocks)
+            String json = content.replaceAll("```json\\s*", "").replaceAll("```", "").trim();
+
+            com.fasterxml.jackson.databind.JsonNode clusters = objectMapper.readTree(json);
+            if (!clusters.isArray()) {
+                log.warn("AI clustering response is not an array: {}", json.substring(0, Math.min(200, json.length())));
+                return 0;
+            }
+
+            // Build content ID lookup map
+            Map<Long, Content> contentMap = unlinkedContents.stream()
+                    .collect(Collectors.toMap(Content::getId, c -> c));
+
+            List<ContentEvent> existingEvents = eventMapper.selectList(null);
+            int newEventCount = 0;
+
+            for (com.fasterxml.jackson.databind.JsonNode cluster : clusters) {
+                String eventTitle = cluster.path("title").asText("未命名事件");
+                com.fasterxml.jackson.databind.JsonNode idsNode = cluster.path("contentIds");
+
+                if (!idsNode.isArray() || idsNode.size() < 2) continue;
+
+                List<Long> contentIds = new ArrayList<>();
+                for (com.fasterxml.jackson.databind.JsonNode idNode : idsNode) {
+                    // AI returns 1-based indices, convert to actual content IDs
+                    int idx = idNode.asInt() - 1;
+                    if (idx >= 0 && idx < unlinkedContents.size()) {
+                        contentIds.add(unlinkedContents.get(idx).getId());
+                    }
+                }
+
+                if (contentIds.size() < 2) continue;
+
+                // Check if an existing event with similar title exists
+                ContentEvent matchedEvent = null;
+                Set<String> eventWords = extractKeywords(eventTitle);
+                for (ContentEvent existing : existingEvents) {
+                    Set<String> existingWords = extractKeywords(existing.getTitle());
+                    Set<String> overlap = new HashSet<>(eventWords);
+                    overlap.retainAll(existingWords);
+                    if (overlap.size() >= 1) {
+                        matchedEvent = existing;
+                        break;
+                    }
+                }
+
+                if (matchedEvent != null) {
+                    // Merge into existing event
+                    for (Long cid : contentIds) {
+                        linkContent(matchedEvent.getId(), cid);
+                    }
+                    matchedEvent.setContentCount(matchedEvent.getContentCount() + contentIds.size());
+                    eventMapper.updateById(matchedEvent);
+                } else {
+                    // Create new event
+                    ContentEvent event = new ContentEvent();
+                    event.setTitle(eventTitle);
+                    event.setSummary("AI自动聚类");
+                    event.setContentCount(contentIds.size());
+                    event.setViewCount(0);
+                    eventMapper.insert(event);
+
+                    for (Long cid : contentIds) {
+                        linkContent(event.getId(), cid);
+                    }
+                    existingEvents.add(event);
+                    newEventCount++;
+                }
+            }
+
+            log.info("AI auto-cluster completed: {} new events created from {} contents", newEventCount, unlinkedContents.size());
+            return newEventCount;
+
+        } catch (Exception e) {
+            log.error("AI clustering failed: {}", e.getMessage(), e);
+            // Fall back to keyword-based clustering
+            return keywordCluster(unlinkedContents);
+        }
+    }
+
+    /**
+     * Fallback keyword-based clustering when AI is unavailable
+     */
+    private int keywordCluster(List<Content> unlinkedContents) {
         Set<Long> processed = new HashSet<>();
+        List<ContentEvent> existingEvents = eventMapper.selectList(null);
+        int newEventCount = 0;
+
         for (int i = 0; i < unlinkedContents.size(); i++) {
             if (processed.contains(unlinkedContents.get(i).getId())) continue;
 
@@ -176,9 +323,6 @@ public class EventServiceImpl implements EventService {
                 if (processed.contains(candidate.getId())) continue;
 
                 Set<String> candidateKeywords = extractKeywords(candidate.getTitle());
-                if (candidateKeywords.isEmpty()) continue;
-
-                // Check for keyword overlap
                 Set<String> overlap = new HashSet<>(baseKeywords);
                 overlap.retainAll(candidateKeywords);
 
@@ -188,45 +332,22 @@ public class EventServiceImpl implements EventService {
                 }
             }
 
-            // Only create event if we found a cluster of 2+ contents
             if (clusterIds.size() >= 2) {
-                // Check if any existing event matches these keywords
-                boolean merged = false;
-                for (ContentEvent existing : existingEvents) {
-                    Set<String> eventKeywords = extractKeywords(existing.getTitle());
-                    Set<String> overlap = new HashSet<>(eventKeywords);
-                    overlap.retainAll(baseKeywords);
-                    if (overlap.size() >= 2) {
-                        // Add to existing event
-                        for (Long cid : clusterIds) {
-                            linkContent(existing.getId(), cid);
-                        }
-                        existing.setContentCount(existing.getContentCount() + clusterIds.size());
-                        eventMapper.updateById(existing);
-                        merged = true;
-                        break;
-                    }
-                }
+                ContentEvent event = new ContentEvent();
+                event.setTitle(generateEventTitle(base));
+                event.setSummary("关键词聚类（AI不可用）");
+                event.setContentCount(clusterIds.size());
+                event.setViewCount(0);
+                eventMapper.insert(event);
 
-                if (!merged) {
-                    // Create new event
-                    ContentEvent event = new ContentEvent();
-                    event.setTitle(generateEventTitle(base));
-                    event.setSummary("自动聚类生成");
-                    event.setContentCount(clusterIds.size());
-                    event.setViewCount(0);
-                    eventMapper.insert(event);
-
-                    for (Long cid : clusterIds) {
-                        linkContent(event.getId(), cid);
-                    }
-                    existingEvents.add(event);
-                    newEventCount++;
+                for (Long cid : clusterIds) {
+                    linkContent(event.getId(), cid);
                 }
+                newEventCount++;
             }
         }
 
-        log.info("Auto-cluster completed: {} new events created", newEventCount);
+        log.info("Keyword fallback cluster completed: {} new events", newEventCount);
         return newEventCount;
     }
 
