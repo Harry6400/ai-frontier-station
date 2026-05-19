@@ -9,4 +9,8 @@ public interface AuthService {
     LoginResponse login(LoginRequest request);
 
     AdminUserVO getCurrentUser(String username);
+
+    void logout(String token);
+
+    boolean isTokenBlacklisted(String token);
 }

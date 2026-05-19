@@ -66,7 +66,9 @@
 
     <!-- Feed List grouped by day -->
     <div class="feed-list">
-      <div v-if="loading" class="empty-state">加载中...</div>
+      <LoadingState v-if="loading" />
+      <ErrorState v-else-if="error" :message="error" @retry="fetchData" />
+      <EmptyState v-else-if="!totalVisible" message="暂无匹配的动态" />
       <template v-else>
         <template v-for="day in groupedFeed" :key="day.date">
           <div v-if="day.items.length" class="day-divider">
@@ -94,7 +96,6 @@
             </div>
           </RouterLink>
         </template>
-        <div v-if="!totalVisible && !loading" class="empty-state">暂无匹配的动态</div>
       </template>
     </div>
   </main>
@@ -105,6 +106,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PortalTopbar from '../components/PortalTopbar.vue'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import EmptyState from '../components/EmptyState.vue'
 import { getContentByType } from '../api/portal'
 
 const products = [
@@ -136,12 +140,14 @@ const activeProduct = ref('all')
 const activeType = ref('all')
 const feedItems = ref([])
 const loading = ref(true)
+const error = ref(null)
 
 const typeBadgeMap = { model: '模型', api: 'API/产品', coding: '编程工具', ide: 'IDE', pricing: '价格/套餐' }
 const typeLabel = (t) => typeBadgeMap[t] || t
 
-// Fetch data from API on mount
-onMounted(async () => {
+async function fetchData() {
+  loading.value = true
+  error.value = null
   try {
     const res = await getContentByType('company_update', { pageNum: 1, pageSize: 50 })
     if (res.code === 200 && res.data?.records) {
@@ -161,10 +167,14 @@ onMounted(async () => {
     }
   } catch (e) {
     console.error('Failed to load company updates:', e)
+    error.value = '加载产品动态失败，请重试'
   } finally {
     loading.value = false
   }
-})
+}
+
+// Fetch data from API on mount
+onMounted(fetchData)
 
 const filteredFeed = computed(() => {
   return feedItems.value.filter(item => {

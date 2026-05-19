@@ -18,8 +18,16 @@ const router = createRouter({
     { path: '/news', name: 'news', component: NewsView },
     { path: '/company', name: 'company', component: CompanyView },
     { path: '/arena', name: 'arena', component: ArenaView },
-    { path: '/tools', name: 'tools', component: ToolsView }
-  ]
+    { path: '/tools', name: 'tools', component: ToolsView },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('../views/NotFoundView.vue')
+    }
+  ],
+  scrollBehavior() {
+    return { top: 0 }
+  }
 })
 
 export default router

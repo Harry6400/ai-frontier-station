@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import PortalTopbar from '../components/PortalTopbar.vue'
+import { getContentByType } from '../api/portal'
 
 // Tab 数据源
 const sources = [
@@ -28,14 +29,24 @@ const models = ref([
   { rank: 10, name: 'Yi-Lightning', org: '01.AI', elo: 1250, change: 2, votes: 10123, color: '#EF4444' }
 ])
 
-// AI 解读
+// AI 解读 - 从后端获取
 const aiSummary = ref({
-  highlights: [
-    'Gemini 2.5 Pro 以 1342 分登顶，超越 GPT-4o 成为新的榜首',
-    'DeepSeek-V3 首次进入前五，展现出强劲的上升势头',
-    '国产模型在中文和数学赛道表现亮眼，Qwen-2.5 和 GLM-4-Plus 稳步提升'
-  ],
-  date: '2024-03-18'
+  highlights: [],
+  date: new Date().toISOString().slice(0, 10)
+})
+const arenaContents = ref([])
+const arenaLoading = ref(true)
+
+onMounted(async () => {
+  try {
+    const res = await getContentByType('arena')
+    arenaContents.value = res.data?.data?.list || res.data?.list || res.data || []
+  } catch (e) {
+    console.warn('获取Arena内容失败:', e)
+    arenaContents.value = []
+  } finally {
+    arenaLoading.value = false
+  }
 })
 
 // 30 天趋势数据（简化为关键时间点）
@@ -86,14 +97,7 @@ function generateTrendPath(config, index) {
   return points.join(' ')
 }
 
-// AI 解读静态内容
-const aiAnalysisContent = `基于最新Arena排行榜数据，当前大模型竞争格局呈现以下特点：
 
-**总榜格局**：GPT-4o、Claude 3.5 Sonnet和Gemini 1.5 Pro稳居前三，形成第一梯队。DeepSeek-V3以开源模型身份闯入Top 5，标志着中国大模型的快速崛起。
-
-**编程能力**：Claude 3.5 Sonnet在编程子榜保持领先，但Gemini差距正在缩小。
-
-**趋势观察**：开源模型与闭源模型的差距持续缩小，价格战推动API成本大幅下降，对开发者是重大利好。`
 
 function renderMarkdown(text) {
   return text
@@ -154,17 +158,19 @@ function renderMarkdown(text) {
       
       <!-- Chatbot Arena 内容 -->
       <template v-if="activeSource === 'arena'">
-        <!-- AI 解读 -->
+        <!-- AI 速报 -->
         <section class="ai-summary">
           <div class="ai-badge">✦ AI 解读</div>
           <div class="ai-content">
-            <h3>今日 Arena 速报 · {{ aiSummary.date }}</h3>
-            <ul>
-              <li v-for="(item, i) in aiSummary.highlights" :key="i">
+            <h3>Arena 速报 · {{ aiSummary.date }}</h3>
+            <ul v-if="arenaContents.length > 0">
+              <li v-for="(item, i) in arenaContents.slice(0, 3)" :key="item.id || i">
                 <span class="highlight-dot"></span>
-                {{ item }}
+                {{ item.title || item.summary?.slice(0, 60) || 'Arena 分析报告' }}
               </li>
             </ul>
+            <p v-else-if="arenaLoading" style="color:#78350F;font-size:14px;">加载中...</p>
+            <p v-else style="color:#78350F;font-size:14px;">暂无Arena分析数据，请在后台数据采集页面触发采集</p>
           </div>
         </section>
         
@@ -312,7 +318,21 @@ function renderMarkdown(text) {
             </div>
           </div>
           <div class="card-body">
-            <div class="ai-analysis-content" v-html="renderMarkdown(aiAnalysisContent)"></div>
+            <div v-if="arenaLoading" class="arena-empty-state">
+              <p>正在加载AI解读数据...</p>
+            </div>
+            <div v-else-if="arenaContents.length === 0" class="arena-empty-state">
+              <p>暂无Arena分析数据，请在后台数据采集页面触发采集</p>
+            </div>
+            <div v-else>
+              <div v-for="item in arenaContents" :key="item.id || item._id" class="arena-content-item">
+                <div class="arena-content-header">
+                  <h4>{{ item.title || 'Arena 分析报告' }}</h4>
+                  <span class="arena-content-date">{{ (item.createdAt || item.publishDate || '').slice(0, 10) }}</span>
+                </div>
+                <div class="ai-analysis-content" v-html="renderMarkdown(item.summary || item.content || '')"></div>
+              </div>
+            </div>
           </div>
         </section>
       </template>
@@ -878,6 +898,45 @@ tr:hover td {
 .ai-analysis-content strong {
   color: var(--accent);
   font-weight: 700;
+}
+
+.arena-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.arena-content-item {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.arena-content-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.arena-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.arena-content-header h4 {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.arena-content-date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
 }
 
 /* 响应式 */

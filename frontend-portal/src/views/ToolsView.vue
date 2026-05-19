@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PortalTopbar from '../components/PortalTopbar.vue'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import EmptyState from '../components/EmptyState.vue'
 import { getContentByType } from '../api/portal'
 
 const activeSource = ref('全部来源')
@@ -18,13 +21,15 @@ const sources = [
 const types = ['全部类型', '使用指南', '工作流', '工具推荐', '行业观点']
 
 const loading = ref(false)
+const error = ref(null)
 const feedItems = ref([])
 
 async function fetchData() {
   loading.value = true
+  error.value = null
   try {
     const res = await getContentByType('practice', { pageNum: 1, pageSize: 50 })
-    const data = res.data?.data || res.data
+    const data = res.data
     const records = data?.records || []
     feedItems.value = records.map((item) => ({
       id: item.id,
@@ -45,6 +50,7 @@ async function fetchData() {
     }))
   } catch (e) {
     console.error('Failed to fetch practices:', e)
+    error.value = '加载数据失败，请重试'
   } finally {
     loading.value = false
   }
@@ -129,7 +135,9 @@ function formatNum(n) {
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" style="text-align:center;padding:40px;color:var(--text-tertiary);">加载中...</div>
+      <LoadingState v-if="loading" />
+      <ErrorState v-else-if="error" :message="error" @retry="fetchData" />
+      <EmptyState v-else-if="!filteredItems.length" message="暂无工具与实践数据" />
 
       <!-- Feed -->
       <div v-else class="feed">

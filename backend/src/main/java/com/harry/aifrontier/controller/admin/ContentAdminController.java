@@ -13,6 +13,7 @@ import com.harry.aifrontier.vo.ContentExternalRefVO;
 import com.harry.aifrontier.vo.ContentOptionsVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,12 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/contents")
 @RequiredArgsConstructor
+@Validated
 public class ContentAdminController {
 
     private final ContentService contentService;
 
     @GetMapping
-    public ApiResponse<PageResult<ContentAdminListItemVO>> page(ContentQueryRequest request) {
+    public ApiResponse<PageResult<ContentAdminListItemVO>> page(@Valid ContentQueryRequest request) {
         return ApiResponse.success(contentService.adminPage(request));
     }
 

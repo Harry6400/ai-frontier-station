@@ -2,9 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PortalTopbar from '../components/PortalTopbar.vue'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import EmptyState from '../components/EmptyState.vue'
 import { getContentByType } from '../api/portal'
 
 const loading = ref(false)
+const error = ref(null)
 const repos = ref([])
 
 const activeDirection = ref('全部')
@@ -64,9 +68,10 @@ const filteredRepos = computed(() => {
 
 async function fetchData() {
   loading.value = true
+  error.value = null
   try {
     const res = await getContentByType('project', { pageNum: 1, pageSize: 50 })
-    const data = res.data?.data || res.data
+    const data = res.data
     const records = data?.records || []
     repos.value = records.map(item => ({
       id: item.id,
@@ -87,6 +92,7 @@ async function fetchData() {
     }))
   } catch (e) {
     console.error('Failed to fetch projects:', e)
+    error.value = '加载项目失败，请重试'
   } finally {
     loading.value = false
   }
@@ -139,24 +145,11 @@ onMounted(fetchData)
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="trend-loading">
-        <div v-for="i in 5" :key="i" class="trend-skeleton">
-          <div class="trend-skel-rank"></div>
-          <div class="trend-skel-body">
-            <div class="trend-skel-title"></div>
-            <div class="trend-skel-desc"></div>
-            <div class="trend-skel-tags"></div>
-          </div>
-          <div class="trend-skel-score"></div>
-        </div>
-      </div>
+      <LoadingState v-if="loading" />
+      <ErrorState v-else-if="error" :message="error" @retry="fetchData" />
 
       <!-- Empty State -->
-      <div v-else-if="filteredRepos.length === 0" class="trend-empty">
-        <span class="trend-empty-icon">📭</span>
-        <p class="trend-empty-title">暂无趋势数据</p>
-        <p class="trend-empty-sub">请在后台数据采集页面触发GitHub采集</p>
-      </div>
+      <EmptyState v-else-if="filteredRepos.length === 0" message="暂无趋势数据" />
 
       <!-- Trend List -->
       <div v-else class="trend-list">

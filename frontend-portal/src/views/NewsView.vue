@@ -2,6 +2,9 @@
 import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PortalTopbar from '../components/PortalTopbar.vue'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import EmptyState from '../components/EmptyState.vue'
 import { useViewMode, useTabs } from '../composables/useViewMode'
 import { getContentByType } from '../api/portal'
 
@@ -13,13 +16,15 @@ const tabs = ['全部', 'AI政策', '行业实践', '技术突破']
 const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
 const loading = ref(false)
+const error = ref(null)
 const newsItems = ref([])
 
 async function fetchData() {
   loading.value = true
+  error.value = null
   try {
     const res = await getContentByType('news', { pageNum: 1, pageSize: 50 })
-    const data = res.data?.data || res.data
+    const data = res.data
     const records = data?.records || []
     newsItems.value = records.map((item, index) => ({
       id: item.id,
@@ -33,6 +38,7 @@ async function fetchData() {
     }))
   } catch (e) {
     console.error('Failed to fetch news:', e)
+    error.value = '加载资讯失败，请重试'
   } finally {
     loading.value = false
   }
@@ -134,10 +140,13 @@ const groupedByCategory = computed(() => {
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" style="text-align:center;padding:40px;color:var(--text-tertiary);">加载中...</div>
+      <LoadingState v-if="loading" />
+      <ErrorState v-else-if="error" :message="error" @retry="fetchData" />
+      <EmptyState v-else-if="!filteredNews.length" message="暂无资讯数据" />
 
       <!-- Stream View -->
-      <div v-else-if="viewMode === 'stream'" class="news-stream">
+      <template v-else>
+      <div v-if="viewMode === 'stream'" class="news-stream">
         <RouterLink
           v-for="(item, index) in filteredNews"
           :key="item.id"
@@ -167,7 +176,7 @@ const groupedByCategory = computed(() => {
       </div>
 
       <!-- Magazine View -->
-      <div v-else class="news-magazine">
+      <div v-if="viewMode !== 'stream'" class="news-magazine">
         <!-- Hero Card -->
         <RouterLink v-if="heroItem" :to="'/contents/' + heroItem.id" class="news-hero" style="text-decoration: none; color: inherit;">
           <div class="news-hero-inner">
@@ -216,6 +225,7 @@ const groupedByCategory = computed(() => {
           </div>
         </div>
       </div>
+      </template>
 
       <footer class="news-footer">
         AI 前沿情报站 · 每日 AI 资讯聚合
