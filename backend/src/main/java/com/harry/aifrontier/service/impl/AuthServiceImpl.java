@@ -2,7 +2,7 @@ package com.harry.aifrontier.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.harry.aifrontier.dto.request.LoginRequest;
-import com.harry.aifrontier.dto.request.LoginResponse;
+import com.harry.aifrontier.vo.LoginResponse;
 import com.harry.aifrontier.entity.AdminUser;
 import com.harry.aifrontier.mapper.AdminUserMapper;
 import com.harry.aifrontier.security.JwtUtil;

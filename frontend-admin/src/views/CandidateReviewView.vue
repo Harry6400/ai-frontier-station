@@ -9,7 +9,9 @@ import {
   approveCandidate,
   rejectCandidate,
   triggerFetch,
-  aiProcessCandidate
+  aiProcessCandidate,
+  getCustomPrompt,
+  saveCustomPrompt as saveCustomPromptApi
 } from '../api/admin'
 
 /* ── source type meta (no arena) ── */
@@ -80,15 +82,24 @@ function openPromptEditor() {
   promptDialogVisible.value = true
 }
 
-function savePrompt() {
-  localStorage.setItem('ai_review_prompt', customPrompt.value)
-  promptDialogVisible.value = false
-  ElMessage.success('提示词已保存')
+async function savePrompt() {
+  try {
+    await saveCustomPromptApi(customPrompt.value)
+    promptDialogVisible.value = false
+    ElMessage.success('提示词已保存')
+  } catch (e) {
+    ElMessage.error('保存提示词失败')
+  }
 }
 
-// Load saved prompt on init
-const savedPrompt = localStorage.getItem('ai_review_prompt')
-if (savedPrompt) customPrompt.value = savedPrompt
+// Load saved prompt from backend on init
+getCustomPrompt().then(res => {
+  if (res.data) customPrompt.value = res.data
+}).catch(() => {
+  // Fallback to localStorage if backend fails
+  const savedPrompt = localStorage.getItem('ai_review_prompt')
+  if (savedPrompt) customPrompt.value = savedPrompt
+})
 
 /* ── data loading ── */
 async function loadCandidates() {

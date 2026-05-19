@@ -88,4 +88,21 @@ public class CandidateAdminController {
         int count = candidateService.fetchFromSource(sourceType);
         return ApiResponse.success("获取完成，新增 " + count + " 条候选", count);
     }
+
+    /**
+     * Get saved custom AI prompt
+     */
+    @GetMapping("/prompt")
+    public ApiResponse<String> getPrompt() {
+        return ApiResponse.success(candidateService.getCustomPrompt());
+    }
+
+    /**
+     * Save custom AI prompt
+     */
+    @PutMapping("/prompt")
+    public ApiResponse<Void> savePrompt(@RequestBody Map<String, String> body) {
+        candidateService.saveCustomPrompt(body.get("prompt"));
+        return ApiResponse.success(null);
+    }
 }

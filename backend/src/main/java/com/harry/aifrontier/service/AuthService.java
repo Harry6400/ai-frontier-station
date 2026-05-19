@@ -1,7 +1,7 @@
 package com.harry.aifrontier.service;
 
 import com.harry.aifrontier.dto.request.LoginRequest;
-import com.harry.aifrontier.dto.request.LoginResponse;
+import com.harry.aifrontier.vo.LoginResponse;
 import com.harry.aifrontier.vo.AdminUserVO;
 
 public interface AuthService {

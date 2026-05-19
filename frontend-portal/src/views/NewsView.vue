@@ -250,7 +250,7 @@ const groupedByCategory = computed(() => {
 
 <style scoped>
 /* Color tokens */
-:root {
+:global(:root) {
   --green: #059669;
   --green-soft: rgba(5, 150, 105, 0.1);
   --orange: #ea580c;

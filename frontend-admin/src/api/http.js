@@ -22,7 +22,7 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('admin_token')
-      window.location.href = '/login'
+      window.location.replace('/login')
       ElMessage.error('登录已过期，请重新登录')
       return Promise.reject(new Error('登录已过期'))
     }

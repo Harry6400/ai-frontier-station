@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS ai_content (
   KEY idx_ai_content_category (category_id),
   KEY idx_ai_content_source (source_id),
   KEY idx_ai_content_publish_time (published_at),
+  INDEX idx_content_title (title(100)),
+  INDEX idx_content_type_status (content_type, publish_status),
   CONSTRAINT fk_ai_content_category FOREIGN KEY (category_id) REFERENCES ai_category (id),
   CONSTRAINT fk_ai_content_source FOREIGN KEY (source_id) REFERENCES ai_source (id)
 ) COMMENT='核心内容表';
@@ -94,13 +96,13 @@ CREATE TABLE IF NOT EXISTS ai_content_external_ref (
   forks INT DEFAULT NULL COMMENT 'GitHub Fork 数',
   watchers INT DEFAULT NULL COMMENT 'GitHub Watcher 数',
   language VARCHAR(50) DEFAULT NULL COMMENT 'GitHub 主要语言',
-  last_synced_at DATETIME DEFAULT NULL COMMENT '最近同步时间',
   sync_status VARCHAR(20) DEFAULT 'pending' COMMENT '同步状态：pending/synced/error',
   sync_error VARCHAR(255) DEFAULT NULL COMMENT '同步错误信息',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   KEY idx_ai_ext_ref_content_id (content_id),
   KEY idx_ai_ext_ref_type (ref_type),
+  INDEX idx_ext_ref_url (external_url(200)),
   CONSTRAINT fk_ai_ext_ref_content FOREIGN KEY (content_id) REFERENCES ai_content (id) ON DELETE CASCADE
 ) COMMENT='外部引用与后续同步预留表';
 

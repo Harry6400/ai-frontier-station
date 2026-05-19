@@ -2,7 +2,7 @@ package com.harry.aifrontier.controller.admin;
 
 import com.harry.aifrontier.common.api.ApiResponse;
 import com.harry.aifrontier.dto.request.LoginRequest;
-import com.harry.aifrontier.dto.request.LoginResponse;
+import com.harry.aifrontier.vo.LoginResponse;
 import com.harry.aifrontier.service.AuthService;
 import com.harry.aifrontier.vo.AdminUserVO;
 import jakarta.validation.Valid;

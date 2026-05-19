@@ -1,4 +1,4 @@
-package com.harry.aifrontier.dto.request;
+package com.harry.aifrontier.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

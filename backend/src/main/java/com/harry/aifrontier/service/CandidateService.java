@@ -43,4 +43,14 @@ public interface CandidateService {
      * Returns number of new candidates fetched.
      */
     int fetchFromSource(String sourceType);
+
+    /**
+     * Get the saved custom AI prompt
+     */
+    String getCustomPrompt();
+
+    /**
+     * Save a custom AI prompt
+     */
+    void saveCustomPrompt(String prompt);
 }

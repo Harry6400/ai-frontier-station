@@ -13,6 +13,8 @@ import com.harry.aifrontier.mapper.CategoryMapper;
 import com.harry.aifrontier.mapper.ContentCandidateMapper;
 import com.harry.aifrontier.mapper.ContentMapper;
 import com.harry.aifrontier.mapper.SourceMapper;
+import com.harry.aifrontier.entity.ApiCredential;
+import com.harry.aifrontier.mapper.ApiCredentialMapper;
 import com.harry.aifrontier.service.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -44,6 +46,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final ArenaService arenaService;
     private final ObjectMapper objectMapper;
     private final ApiCredentialService apiCredentialService;
+    private final ApiCredentialMapper apiCredentialMapper;
 
     @Value("${app.bailian.api-key:}")
     private String bailianApiKey;
@@ -494,5 +497,42 @@ public class CandidateServiceImpl implements CandidateService {
             return fallback;
         }
         return value.trim();
+    }
+
+    // ========================================================================
+    // Custom prompt persistence
+    // ========================================================================
+
+    private static final String PROMPT_PROVIDER = "custom_prompt";
+
+    @Override
+    public String getCustomPrompt() {
+        ApiCredential record = apiCredentialMapper.selectOne(
+                new LambdaQueryWrapper<ApiCredential>()
+                        .eq(ApiCredential::getProvider, PROMPT_PROVIDER)
+        );
+        return record != null ? record.getEncryptedKey() : "";
+    }
+
+    @Override
+    public void saveCustomPrompt(String prompt) {
+        ApiCredential existing = apiCredentialMapper.selectOne(
+                new LambdaQueryWrapper<ApiCredential>()
+                        .eq(ApiCredential::getProvider, PROMPT_PROVIDER)
+        );
+        if (existing != null) {
+            existing.setEncryptedKey(prompt != null ? prompt : "");
+            existing.setUpdatedAt(LocalDateTime.now());
+            apiCredentialMapper.updateById(existing);
+        } else {
+            ApiCredential record = new ApiCredential();
+            record.setProvider(PROMPT_PROVIDER);
+            record.setEncryptedKey(prompt != null ? prompt : "");
+            record.setIv("plaintext");
+            record.setKeySuffix("prompt");
+            record.setRemark("自定义AI提示词");
+            record.setIsEnabled(1);
+            apiCredentialMapper.insert(record);
+        }
     }
 }

@@ -159,3 +159,11 @@ export function triggerFetch(sourceType) {
 export function aiProcessCandidate(id, payload) {
   return http.post(`/admin/candidates/${id}/ai-process`, payload || {})
 }
+
+export function getCustomPrompt() {
+  return http.get('/admin/candidates/prompt')
+}
+
+export function saveCustomPrompt(prompt) {
+  return http.put('/admin/candidates/prompt', { prompt })
+}
