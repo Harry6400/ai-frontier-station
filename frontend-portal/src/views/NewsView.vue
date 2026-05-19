@@ -12,7 +12,11 @@ import { getContentByType } from '../api/portal'
 const { viewMode, setViewMode } = useViewMode('news-view', 'stream')
 const { activeTab, setTab } = useTabs('全部')
 
-const tabs = ['全部', 'AI政策', '行业实践', '技术突破']
+// 动态Tab：'全部' + 从数据中提取的唯一分类
+const tabs = computed(() => {
+  const categories = [...new Set(newsItems.value.map(n => n.category).filter(Boolean))]
+  return ['全部', ...categories]
+})
 
 const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
@@ -58,11 +62,30 @@ const filteredNews = computed(() => {
   return newsItems.value.filter(n => n.category === activeTab.value)
 })
 
-const categoryColors = {
+const categoryColorMap = {
   'AI政策': { bg: 'var(--red-soft)', color: 'var(--red)', label: '政策' },
   '行业实践': { bg: 'var(--teal-soft)', color: 'var(--teal)', label: '实践' },
   '技术突破': { bg: 'var(--purple-soft)', color: 'var(--purple)', label: '技术' }
 }
+
+const fallbackColors = [
+  { bg: 'var(--green-soft)', color: 'var(--green)' },
+  { bg: 'var(--orange-soft)', color: 'var(--orange)' },
+  { bg: 'var(--purple-soft)', color: 'var(--purple)' },
+  { bg: 'var(--teal-soft)', color: 'var(--teal)'}
+]
+
+// 动态分类颜色：已知分类用预设颜色，未知分类自动分配
+const categoryColors = computed(() => {
+  const map = { ...categoryColorMap }
+  const cats = [...new Set(newsItems.value.map(n => n.category).filter(Boolean))]
+  cats.forEach((cat, i) => {
+    if (!map[cat]) {
+      map[cat] = { ...fallbackColors[i % fallbackColors.length], label: cat }
+    }
+  })
+  return map
+})
 
 const todayCount = computed(() => newsItems.value.length)
 const sourceCount = computed(() => new Set(newsItems.value.map(n => n.source)).size)

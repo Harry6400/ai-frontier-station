@@ -25,9 +25,22 @@ const overview = ref({
 
 const statCards = computed(() => [
   { label: '内容总量', value: overview.value.totals.contents, tone: 'primary' },
-  { label: '来源入口', value: overview.value.totals.sources, tone: 'neutral' },
-  { label: '外部引用', value: overview.value.totals.externalRefs, tone: 'accent' }
+  { label: '已发布', value: overview.value.totals.published, tone: 'accent' },
+  { label: '待审核(草稿)', value: overview.value.totals.drafts, tone: 'neutral' },
+  { label: '来源数', value: overview.value.totals.sources, tone: 'primary' }
 ])
+
+// 采集活动卡片（近7日）
+const fetchLogCards = computed(() => {
+  const stats = overview.value.fetchLogStats
+  if (!stats) return []
+  return [
+    { label: '近7日采集', value: stats.totalFetches7d || 0 },
+    { label: '采集成功', value: stats.successfulFetches7d || 0 },
+    { label: '采集失败', value: stats.failedFetches7d || 0 },
+    { label: '导入内容', value: stats.totalPapersImported7d || 0 }
+  ]
+})
 
 function formatDateTime(value) {
   if (!value) return '暂无时间'
@@ -103,6 +116,19 @@ onMounted(loadDashboard)
           <span>{{ item.label }}</span>
           <strong>{{ item.count }}</strong>
           <em>{{ item.ratio }}%</em>
+        </article>
+      </div>
+    </section>
+
+    <!-- 采集活动（近7日） -->
+    <section v-if="fetchLogCards.length" class="card-panel dashboard-panel dashboard-dist-panel">
+      <div class="dashboard-panel-head">
+        <h4>采集活动 (近7日)</h4>
+      </div>
+      <div class="dashboard-dist-strip">
+        <article v-for="item in fetchLogCards" :key="item.label" class="dashboard-dist-chip">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
         </article>
       </div>
     </section>

@@ -7,32 +7,27 @@ import { getPapers } from '../api/portal'
 // 视图模式切换
 const { viewMode, setViewMode } = useViewMode('papers-view', 'list')
 
-// Tab切换
-const tabs = ['3D CT去噪', '医学影像', '大模型']
-const { activeTab, setTab } = useTabs('3D CT去噪')
+// SubCategory中文标签映射
+const subCategoryLabels = {
+  '3d_ct_denoising': '3D CT去噪',
+  'medical_imaging': '医学影像',
+  'large_model': '大模型'
+}
 
 // 展开/收起详情
 const expanded = ref(false)
 
-// Tab到subCategory的映射
-const tabSubCategoryMap = {
-  '3D CT去噪': '3d_ct_denoising',
-  '医学影像': 'medical_imaging',
-  '大模型': 'large_model'
-}
-
 // 论文数据
-const papers = ref([])
+const allPapers = ref([])
 const loading = ref(false)
 const totalPapers = ref(0)
 
-// 从后端获取论文
+// 从后端获取全部论文（不按subCategory过滤，用于动态发现分类）
 async function fetchPapers() {
   loading.value = true
   try {
-    const subCategory = tabSubCategoryMap[activeTab.value]
-    const res = await getPapers({ subCategory, pageNum: 1, pageSize: 50 })
-    papers.value = (res.data?.records || []).map((r, i) => ({
+    const res = await getPapers({ pageNum: 1, pageSize: 200 })
+    allPapers.value = (res.data?.records || []).map((r, i) => ({
       id: r.id,
       rank: i + 1,
       title: r.title,
@@ -43,7 +38,7 @@ async function fetchPapers() {
       date: r.publishedAt?.split('T')[0] || '',
       paperLink: r.sourceUrl || '#',
       codeLink: null,
-      category: activeTab.value
+      subCategory: r.subCategory || ''
     }))
     totalPapers.value = res.data?.total || 0
   } catch (e) {
@@ -53,21 +48,46 @@ async function fetchPapers() {
   }
 }
 
+// 动态Tab：从数据中提取唯一subCategory
+const tabs = computed(() => {
+  const subCats = [...new Set(allPapers.value.map(p => p.subCategory).filter(Boolean))]
+  return subCats.map(sc => subCategoryLabels[sc] || sc)
+})
+
+// 反向映射：中文标签 -> subCategory key
+const reverseLabelMap = computed(() => {
+  const map = {}
+  Object.entries(subCategoryLabels).forEach(([key, label]) => { map[label] = key })
+  return map
+})
+
+const { activeTab, setTab } = useTabs('')
+
+// 数据加载后自动选中第一个Tab
+watch(tabs, (newTabs) => {
+  if (newTabs.length && !newTabs.includes(activeTab.value)) {
+    setTab(newTabs[0])
+  }
+}, { immediate: true })
+
 onMounted(fetchPapers)
-watch(activeTab, fetchPapers)
 
 // AI摘要信息（基于真实数据）
 const summaryInfo = computed(() => ({
-  paperCount: totalPapers.value,
+  paperCount: filteredPapers.value.length,
   period: '最近更新',
-  category: activeTab.value,
-  summary: `当前${activeTab.value}板块共收录 ${totalPapers.value} 篇论文。`,
+  category: activeTab.value || '全部',
+  summary: `当前${activeTab.value || '全部'}板块共收录 ${filteredPapers.value.length} 篇论文。`,
   keywords: [],
   updateTime: new Date().toLocaleString('zh-CN')
 }))
 
-// 当前Tab下的论文（API已按subCategory过滤）
-const filteredPapers = computed(() => papers.value)
+// 当前Tab下的论文（客户端过滤）
+const filteredPapers = computed(() => {
+  if (!activeTab.value) return allPapers.value
+  const subCat = reverseLabelMap.value[activeTab.value] || activeTab.value
+  return allPapers.value.filter(p => p.subCategory === subCat)
+})
 </script>
 
 <template>
@@ -118,7 +138,7 @@ const filteredPapers = computed(() => papers.value)
       
       <!-- Tab栏和视图切换 -->
       <div class="toolbar">
-        <div class="tabs">
+        <div v-if="tabs.length" class="tabs">
           <button
             v-for="tab in tabs"
             :key="tab"
