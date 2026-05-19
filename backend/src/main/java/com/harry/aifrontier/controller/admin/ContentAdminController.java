@@ -7,6 +7,8 @@ import com.harry.aifrontier.dto.request.ContentExternalRefSaveRequest;
 import com.harry.aifrontier.dto.request.ContentSaveRequest;
 import com.harry.aifrontier.dto.request.ContentStatusUpdateRequest;
 import com.harry.aifrontier.service.ContentService;
+import com.harry.aifrontier.service.CandidateService;
+import java.util.Map;
 import com.harry.aifrontier.vo.ContentAdminListItemVO;
 import com.harry.aifrontier.vo.ContentDetailVO;
 import com.harry.aifrontier.vo.ContentExternalRefVO;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContentAdminController {
 
     private final ContentService contentService;
+    private final CandidateService candidateService;
 
     @GetMapping
     public ApiResponse<PageResult<ContentAdminListItemVO>> page(@Valid ContentQueryRequest request) {
@@ -88,5 +91,17 @@ public class ContentAdminController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         contentService.delete(id);
         return ApiResponse.success("内容删除成功", null);
+    }
+
+    @PostMapping("/{id}/translate")
+    public ApiResponse<String> translateContent(@PathVariable Long id) {
+        String result = candidateService.translateContent(id);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/batch-translate")
+    public ApiResponse<Integer> batchTranslate() {
+        int count = candidateService.batchTranslateEnglish();
+        return ApiResponse.success("翻译完成，处理 " + count + " 条", count);
     }
 }

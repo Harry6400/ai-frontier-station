@@ -43,6 +43,8 @@ public interface CandidateService {
      * Returns number of new candidates fetched.
      */
     int fetchFromSource(String sourceType);
+    String translateContent(Long contentId);
+    int batchTranslateEnglish();
 
     /**
      * Get the saved custom AI prompt

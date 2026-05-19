@@ -342,7 +342,7 @@ function renderMarkdown(text) {
         <div class="coming-soon">
           <div class="coming-icon">🚧</div>
           <h3>{{ sources.find(s => s.id === activeSource)?.name }}</h3>
-          <p>该数据源正在接入中，敬请期待...</p>
+          <p>暂无数据</p>
           <div class="coming-features">
             <div class="feature-item">
               <span class="feature-icon">📊</span>

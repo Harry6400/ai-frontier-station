@@ -535,4 +535,106 @@ public class CandidateServiceImpl implements CandidateService {
             apiCredentialMapper.insert(record);
         }
     }
+
+    @Override
+    public String translateContent(Long contentId) {
+        Content content = contentMapper.selectById(contentId);
+        if (content == null) return "内容不存在";
+
+        String body = content.getBodyMarkdown();
+        if (body == null || body.isBlank()) return "无正文内容";
+
+        // Check if already Chinese (skip if >50% Chinese chars)
+        long chineseChars = body.chars().filter(c -> c >= 0x4e00 && c <= 0x9fff).count();
+        if (chineseChars > body.length() * 0.3) {
+            return "内容已是中文，跳过翻译";
+        }
+
+        String apiKey = apiCredentialService.resolveBailianApiKey(bailianApiKey);
+        if (apiKey == null || apiKey.isBlank()) {
+            return "百炼 API Key 未配置";
+        }
+
+        String prompt = "请将以下AI领域内容翻译并整理为中文，使用结构化Markdown格式。\n\n" +
+                "标题：" + content.getTitle() + "\n\n" +
+                "原始内容：\n" + body.substring(0, Math.min(body.length(), 2000)) + "\n\n" +
+                "要求：\n" +
+                "1. 必须使用中文输出\n" +
+                "2. 使用结构化Markdown，包含：## 核心要点（3-5条）和 ## 详细内容\n" +
+                "3. 保持专业性和准确性\n" +
+                "4. 不要添加额外评论";
+
+        try {
+            String translated = callAiApi(prompt, apiKey);
+            if (translated != null && !translated.isBlank()) {
+                content.setBodyMarkdown(translated);
+                contentMapper.updateById(content);
+                log.info("Translated content {}: {} chars", contentId, translated.length());
+                return "翻译完成";
+            }
+            return "AI返回为空";
+        } catch (Exception e) {
+            log.error("Translation failed for content {}: {}", contentId, e.getMessage());
+            return "翻译失败: " + e.getMessage();
+        }
+    }
+
+    @Override
+    public int batchTranslateEnglish() {
+        List<Content> englishContents = contentMapper.selectList(
+                new LambdaQueryWrapper<Content>()
+                        .isNotNull(Content::getBodyMarkdown)
+                        .ne(Content::getBodyMarkdown, " ")
+                        .ne(Content::getContentType, "paper")
+        );
+
+        int processed = 0;
+        for (Content content : englishContents) {
+            String body = content.getBodyMarkdown();
+            if (body == null || body.isBlank()) continue;
+
+            // Skip if already Chinese
+            long chineseChars = body.chars().filter(c -> c >= 0x4e00 && c <= 0x9fff).count();
+            if (chineseChars > body.length() * 0.3) continue;
+
+            String result = translateContent(content.getId());
+            if (result.contains("完成")) {
+                processed++;
+            }
+
+            // Rate limit: wait 1 second between API calls
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        }
+
+        log.info("Batch translate completed: {}/{} items processed", processed, englishContents.size());
+        return processed;
+    }
+
+    private String callAiApi(String prompt, String apiKey) {
+        java.util.Map<String, Object> body = java.util.Map.of(
+                "model", bailianModel,
+                "messages", java.util.List.of(
+                        java.util.Map.of("role", "user", "content", prompt)
+                ),
+                "temperature", 0.1,
+                "max_tokens", 2000
+        );
+
+        String response = RestClient.create(bailianBaseUrl)
+                .post()
+                .uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(response);
+            return root.path("choices").path(0).path("message").path("content").asText("");
+        } catch (Exception e) {
+            log.error("Failed to parse AI response: {}", e.getMessage());
+            return null;
+        }
+    }
 }

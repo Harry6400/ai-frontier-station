@@ -171,7 +171,7 @@ onMounted(loadHome)
                     <strong>{{ card.title }}</strong>
                     <p>{{ card.description }}</p>
                   </div>
-                  <span v-if="card.coming" class="nav-chip-num nav-chip-num--muted">敬请期待</span>
+                  
                   <span v-else class="nav-chip-num">{{ getSectionCount(card.contentType) }}</span>
                 </RouterLink>
               </div>
