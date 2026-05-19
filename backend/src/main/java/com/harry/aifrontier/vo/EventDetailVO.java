@@ -29,4 +29,6 @@ public class EventDetailVO {
     private LocalDateTime updatedAt;
 
     private List<EventContentVO> contents;
+
+    private String status;
 }

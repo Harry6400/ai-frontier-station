@@ -186,15 +186,15 @@ public class EventServiceImpl implements EventService {
             return 0;
         }
 
-        String prompt = "你是AI前沿情报站的内容分析助手。下面是一批AI领域的文章标题，请将它们按主题聚类成事件。\n\n" +
+        String prompt = "你是AI前沿情报站的内容分析助手。下面是一批AI领域的文章标题，请将它们按主题聚类成事件，并为每个事件生成中文内容。\n\n" +
                 "规则：\n" +
                 "1. 只聚类确实相关的文章（同一公司/产品/技术方向）\n" +
                 "2. 不要强行聚类，如果某篇文章不属于任何事件，跳过它\n" +
                 "3. 每个事件至少包含2篇文章\n" +
-                "4. 用中文生成事件标题\n\n" +
+                "4. 用中文生成事件标题、摘要和描述\n\n" +
                 "文章列表：\n" + contentList +
                 "\n请严格以JSON数组格式输出，不要添加其他内容：\n" +
-                "[{\"title\": \"事件标题\", \"contentIds\": [1, 3, 5]}, ...]";
+                "[{\"title\": \"中文事件标题\", \"summary\": \"2-3句中文摘要\", \"description\": \"详细中文描述（Markdown格式，包含背景、影响、发展趋势等）\", \"contentIds\": [1, 3, 5]}, ...]";
 
         try {
             Map<String, Object> body = Map.of(
@@ -273,12 +273,17 @@ public class EventServiceImpl implements EventService {
                     matchedEvent.setContentCount(matchedEvent.getContentCount() + contentIds.size());
                     eventMapper.updateById(matchedEvent);
                 } else {
-                    // Create new event
+                    // Create new event with AI-generated content
+                    String eventSummary = cluster.path("summary").asText("AI自动聚类");
+                    String eventDescription = cluster.path("description").asText("");
+
                     ContentEvent event = new ContentEvent();
                     event.setTitle(eventTitle);
-                    event.setSummary("AI自动聚类");
+                    event.setSummary(eventSummary);
+                    event.setDescription(eventDescription);
                     event.setContentCount(contentIds.size());
                     event.setViewCount(0);
+                    event.setStatus("pending");
                     eventMapper.insert(event);
 
                     for (Long cid : contentIds) {
@@ -338,6 +343,7 @@ public class EventServiceImpl implements EventService {
                 event.setSummary("关键词聚类（AI不可用）");
                 event.setContentCount(clusterIds.size());
                 event.setViewCount(0);
+                event.setStatus("pending");
                 eventMapper.insert(event);
 
                 for (Long cid : clusterIds) {
@@ -401,6 +407,7 @@ public class EventServiceImpl implements EventService {
         vo.setViewCount(event.getViewCount());
         vo.setCreatedAt(event.getCreatedAt());
         vo.setUpdatedAt(event.getUpdatedAt());
+        vo.setStatus(event.getStatus());
         return vo;
     }
 
@@ -416,6 +423,7 @@ public class EventServiceImpl implements EventService {
         vo.setViewCount(event.getViewCount());
         vo.setCreatedAt(event.getCreatedAt());
         vo.setUpdatedAt(event.getUpdatedAt());
+        vo.setStatus(event.getStatus());
 
         // Load linked contents
         List<ContentEventLink> links = linkMapper.selectList(
@@ -453,5 +461,46 @@ public class EventServiceImpl implements EventService {
         } catch (Exception e) {
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    @Transactional
+    public void approveEvent(Long id) {
+        ContentEvent event = eventMapper.selectById(id);
+        if (event == null) {
+            throw new IllegalArgumentException("事件不存在");
+        }
+
+        // Publish all linked contents
+        List<ContentEventLink> links = linkMapper.selectList(
+                new LambdaQueryWrapper<ContentEventLink>()
+                        .eq(ContentEventLink::getEventId, id));
+
+        for (ContentEventLink link : links) {
+            Content content = contentMapper.selectById(link.getContentId());
+            if (content != null) {
+                content.setPublishStatus("PUBLISHED");
+                content.setPublishedAt(LocalDateTime.now());
+                contentMapper.updateById(content);
+            }
+        }
+
+        // Update event status
+        event.setStatus("approved");
+        event.setUpdatedAt(LocalDateTime.now());
+        eventMapper.updateById(event);
+    }
+
+    @Override
+    @Transactional
+    public void rejectEvent(Long id) {
+        ContentEvent event = eventMapper.selectById(id);
+        if (event == null) {
+            throw new IllegalArgumentException("事件不存在");
+        }
+
+        event.setStatus("rejected");
+        event.setUpdatedAt(LocalDateTime.now());
+        eventMapper.updateById(event);
     }
 }

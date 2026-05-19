@@ -52,4 +52,16 @@ public class EventAdminController {
         int count = eventService.autoCluster();
         return ApiResponse.success("自动聚类完成，新增 " + count + " 个事件", count);
     }
+
+    @PostMapping("/{id}/approve")
+    public ApiResponse<Void> approveEvent(@PathVariable Long id) {
+        eventService.approveEvent(id);
+        return ApiResponse.success("事件审核通过", null);
+    }
+
+    @PostMapping("/{id}/reject")
+    public ApiResponse<Void> rejectEvent(@PathVariable Long id) {
+        eventService.rejectEvent(id);
+        return ApiResponse.success("事件已驳回", null);
+    }
 }

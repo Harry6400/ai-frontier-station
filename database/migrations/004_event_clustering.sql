@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS ai_content_event (
   tags JSON COMMENT '标签JSON数组',
   content_count INT DEFAULT 0 COMMENT '关联内容数量',
   view_count INT DEFAULT 0 COMMENT '浏览量',
+  status VARCHAR(20) DEFAULT 'pending' COMMENT '审核状态: pending/approved/rejected',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   KEY idx_event_title (title(100)),

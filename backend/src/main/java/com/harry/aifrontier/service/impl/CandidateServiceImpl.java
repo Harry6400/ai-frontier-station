@@ -47,6 +47,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final ObjectMapper objectMapper;
     private final ApiCredentialService apiCredentialService;
     private final ApiCredentialMapper apiCredentialMapper;
+    private final EventService eventService;
 
     @Value("${app.bailian.api-key:}")
     private String bailianApiKey;
@@ -304,6 +305,15 @@ public class CandidateServiceImpl implements CandidateService {
             default:
                 throw BizException.badRequest("暂不支持的数据源类型: " + sourceType);
         }
+
+        // Auto-cluster after fetch
+        try {
+            int events = eventService.autoCluster();
+            log.info("Auto-cluster after fetch {}: {} events created", sourceType, events);
+        } catch (Exception e) {
+            log.warn("Auto-cluster after fetch failed: {}", e.getMessage());
+        }
+
         return count;
     }
 

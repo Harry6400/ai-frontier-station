@@ -167,3 +167,17 @@ export function getCustomPrompt() {
 export function saveCustomPrompt(prompt) {
   return http.put('/admin/candidates/prompt', { prompt })
 }
+
+// 事件管理
+export function getEvents(params) {
+  return http.get('/admin/events', { params })
+}
+export function approveEvent(id) {
+  return http.post(`/admin/events/${id}/approve`)
+}
+export function rejectEvent(id) {
+  return http.post(`/admin/events/${id}/reject`)
+}
+export function triggerAutoCluster() {
+  return http.post('/admin/events/auto-cluster')
+}

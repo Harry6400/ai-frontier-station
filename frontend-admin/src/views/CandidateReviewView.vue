@@ -11,7 +11,11 @@ import {
   triggerFetch,
   aiProcessCandidate,
   getCustomPrompt,
-  saveCustomPrompt as saveCustomPromptApi
+  saveCustomPrompt as saveCustomPromptApi,
+  getEvents,
+  approveEvent,
+  rejectEvent,
+  triggerAutoCluster
 } from '../api/admin'
 
 /* ── source type meta (no arena) ── */
@@ -56,6 +60,13 @@ const aiProcessing = ref(false)
 const fetchDialogVisible = ref(false)
 const fetchSourceType = ref('github')
 const fetching = ref(false)
+
+/* ── events state ── */
+const eventList = ref([])
+const eventLoading = ref(false)
+const eventTotal = ref(0)
+const eventPage = ref(1)
+const eventPageSize = ref(10)
 
 /* ── prompt editor ── */
 const promptDialogVisible = ref(false)
@@ -216,7 +227,14 @@ async function handleTriggerFetch() {
     await triggerFetch(fetchSourceType.value)
     ElMessage.success(`已触发 ${SOURCE_TYPE_META[fetchSourceType.value]?.label || fetchSourceType.value} 数据采集`)
     fetchDialogVisible.value = false
-    setTimeout(() => loadCandidates(), 2000)
+    // Auto-cluster after fetch
+    try {
+      await triggerAutoCluster()
+      ElMessage.success('自动聚类已触发')
+    } catch (e) {
+      // clustering may fail silently if no new data
+    }
+    setTimeout(() => { loadCandidates(); loadEvents() }, 2000)
   } catch (err) {
     ElMessage.error('触发采集失败：' + (err.response?.data?.message || err.message))
   } finally {
@@ -263,14 +281,108 @@ function truncateText(text, len = 60) {
   return text.length > len ? text.slice(0, len) + '…' : text
 }
 
+/* ── events ── */
+async function loadEvents() {
+  eventLoading.value = true
+  try {
+    const res = await getEvents({ pageNum: eventPage.value, pageSize: eventPageSize.value })
+    eventList.value = res.data?.records || res.data?.items || res.data?.list || res.data || []
+    eventTotal.value = res.data?.total || eventList.value.length
+  } catch (err) {
+    ElMessage.error('加载事件列表失败：' + (err.response?.data?.message || err.message))
+  } finally {
+    eventLoading.value = false
+  }
+}
+
+async function handleApproveEvent(event) {
+  try {
+    await ElMessageBox.confirm(`确认批准事件「${event.title}」？将发布所有关联内容。`, '批准事件', { type: 'info' })
+    await approveEvent(event.id)
+    ElMessage.success('事件已批准，关联内容已发布')
+    loadEvents()
+    loadCandidates()
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('批准失败：' + (err.response?.data?.message || err.message))
+    }
+  }
+}
+
+async function handleRejectEvent(event) {
+  try {
+    await ElMessageBox.confirm(`确认拒绝事件「${event.title}」？`, '拒绝事件', { type: 'warning' })
+    await rejectEvent(event.id)
+    ElMessage.success('事件已拒绝')
+    loadEvents()
+    loadCandidates()
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('拒绝失败：' + (err.response?.data?.message || err.message))
+    }
+  }
+}
+
+function handleEventPageChange(p) {
+  eventPage.value = p
+  loadEvents()
+}
+
 /* ── lifecycle ── */
 onMounted(() => {
+  loadEvents()
   loadCandidates()
 })
 </script>
 
 <template>
   <section class="candidate-page">
+    <!-- events review section -->
+    <div class="event-section">
+      <div class="event-section-header">
+        <h3>📋 事件审核</h3>
+        <el-button size="small" @click="loadEvents" :loading="eventLoading">刷新</el-button>
+      </div>
+      <div v-if="eventLoading && eventList.length === 0" class="event-loading">加载中...</div>
+      <div v-else-if="eventList.length === 0" class="event-empty">暂无待审核事件</div>
+      <div v-else class="event-list">
+        <div v-for="event in eventList" :key="event.id" class="event-card">
+          <div class="event-card-body">
+            <div class="event-title">{{ event.title }}</div>
+            <div class="event-summary">{{ event.summary }}</div>
+            <div class="event-meta">
+              <el-tag size="small" type="info">{{ event.contentCount || event.contents?.length || 0 }} 条关联内容</el-tag>
+              <span v-if="event.status" class="event-status-tag">
+                <el-tag size="small" :type="event.status === 'approved' ? 'success' : event.status === 'rejected' ? 'danger' : 'warning'">
+                  {{ event.status === 'approved' ? '已批准' : event.status === 'rejected' ? '已拒绝' : '待审核' }}
+                </el-tag>
+              </span>
+            </div>
+          </div>
+          <div class="event-card-actions" v-if="event.status !== 'approved' && event.status !== 'rejected'">
+            <button class="cd-btn cd-btn-primary" @click="handleApproveEvent(event)">✓ 批准</button>
+            <button class="cd-btn cd-btn-outline-danger" @click="handleRejectEvent(event)">✗ 拒绝</button>
+          </div>
+        </div>
+        <div v-if="eventTotal > eventPageSize" class="event-pagination">
+          <el-pagination
+            background
+            layout="prev, pager, next"
+            :total="eventTotal"
+            :page-size="eventPageSize"
+            :current-page="eventPage"
+            @current-change="handleEventPageChange"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- candidate list section -->
+    <div class="candidate-section">
+      <div class="candidate-section-header">
+        <h3>📄 候选列表</h3>
+      </div>
+
     <!-- top toolbar -->
     <div class="candidate-toolbar">
       <!-- source type tabs -->
@@ -344,7 +456,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="author" label="作者" width="120" show-overflow-tooltip />
+        <el-table-column prop="author" label="作者" width="120" show-overflow-tooltip v-if="activeSourceType === 'paper'" />
         <el-table-column prop="publishedAt" label="发布时间" width="130" align="center">
           <template #default="{ row }">
             {{ formatDate(row.publishedAt) }}
@@ -364,6 +476,8 @@ onMounted(() => {
         />
       </div>
     </div>
+
+    </div> <!-- /candidate-section -->
 
     <!-- detail dialog (modal) -->
     <el-dialog
@@ -412,11 +526,11 @@ onMounted(() => {
               <div v-show="detailTab==='ai'" class="cd-tab-panel">
                 <div class="cd-field">
                   <label>AI 摘要</label>
-                  <el-input v-model="selectedCandidate.aiSummary" type="textarea" :rows="3" placeholder="点击 AI 处理生成摘要..." />
+                  <el-input v-model="selectedCandidate.aiSummary" type="textarea" :rows="3" placeholder="AI 自动生成摘要..." />
                 </div>
                 <div class="cd-field">
                   <label>AI 正文</label>
-                  <el-input v-model="selectedCandidate.aiBody" type="textarea" :rows="12" placeholder="点击 AI 处理生成正文..." />
+                  <el-input v-model="selectedCandidate.aiBody" type="textarea" :rows="12" placeholder="AI 自动生成正文..." />
                 </div>
               </div>
               <!-- prompt tab -->
@@ -440,10 +554,6 @@ onMounted(() => {
 
       <template #footer>
         <div class="cd-footer">
-          <button class="cd-btn cd-btn-accent" :disabled="aiProcessing" @click="handleAiProcess">
-            <span v-if="aiProcessing" class="cd-spinner"></span>
-            AI 处理
-          </button>
           <button class="cd-btn cd-btn-ghost" :disabled="saving" @click="handleSave">保存</button>
           <button class="cd-btn cd-btn-outline-danger" @click="handleReject">拒绝</button>
           <button class="cd-btn cd-btn-primary" @click="handleApprove">批准</button>
@@ -1085,4 +1195,119 @@ onMounted(() => {
   animation: cd-spin 0.6s linear infinite;
 }
 @keyframes cd-spin { to { transform: rotate(360deg); } }
+
+/* ── event section ── */
+.candidate-section {
+  background: var(--admin-surface, #fff);
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 20px;
+}
+
+.candidate-section-header {
+  margin-bottom: 16px;
+}
+
+.candidate-section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--admin-text, #1f2937);
+}
+
+.event-section {
+  background: var(--admin-surface, #fff);
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 20px;
+}
+
+.event-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.event-section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--admin-text, #1f2937);
+}
+
+.event-loading,
+.event-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--admin-text-secondary, #6b7280);
+  font-size: 14px;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--admin-surface-secondary, #f9fafb);
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 6px;
+  padding: 16px;
+  transition: border-color 0.2s;
+}
+
+.event-card:hover {
+  border-color: var(--admin-primary, #3b82f6);
+}
+
+.event-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-text, #1f2937);
+  margin-bottom: 6px;
+}
+
+.event-summary {
+  font-size: 13px;
+  color: var(--admin-text-secondary, #6b7280);
+  margin-bottom: 8px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.event-pagination {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
 </style>

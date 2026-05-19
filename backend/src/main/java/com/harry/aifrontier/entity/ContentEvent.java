@@ -31,4 +31,6 @@ public class ContentEvent {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String status;
 }

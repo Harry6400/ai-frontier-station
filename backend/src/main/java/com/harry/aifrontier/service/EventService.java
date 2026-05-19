@@ -18,4 +18,8 @@ public interface EventService {
     void deleteEvent(Long id);
 
     int autoCluster();
+
+    void approveEvent(Long id);
+
+    void rejectEvent(Long id);
 }

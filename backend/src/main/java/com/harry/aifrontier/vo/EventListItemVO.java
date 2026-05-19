@@ -25,4 +25,6 @@ public class EventListItemVO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String status;
 }
