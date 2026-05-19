@@ -12,6 +12,9 @@ import { ElRadio, ElRadioGroup } from 'element-plus/es/components/radio/index'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index'
 import { ElTag } from 'element-plus/es/components/tag/index'
+import { ElEmpty } from 'element-plus/es/components/empty/index'
+import { ElLoading } from 'element-plus/es/components/loading/index'
+import { vLoading } from 'element-plus/es/components/loading/src/directive'
 import 'element-plus/theme-chalk/base.css'
 import 'element-plus/theme-chalk/el-alert.css'
 import 'element-plus/theme-chalk/el-button.css'
@@ -34,6 +37,8 @@ import 'element-plus/theme-chalk/el-select.css'
 import 'element-plus/theme-chalk/el-table.css'
 import 'element-plus/theme-chalk/el-table-column.css'
 import 'element-plus/theme-chalk/el-tag.css'
+import 'element-plus/theme-chalk/el-empty.css'
+import 'element-plus/theme-chalk/el-loading.css'
 import App from './App.vue'
 import router from './router'
 import './styles/admin.css'
@@ -54,7 +59,8 @@ const elementComponents = [
   ElSelect,
   ElTable,
   ElTableColumn,
-  ElTag
+  ElTag,
+  ElEmpty
 ]
 
 const app = createApp(App)
@@ -62,5 +68,8 @@ const app = createApp(App)
 elementComponents.forEach((component) => {
   app.use(component)
 })
+
+app.directive('loading', vLoading)
+app.use(ElLoading)
 
 app.use(createPinia()).use(router).mount('#app')

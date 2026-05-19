@@ -5,10 +5,19 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(BizException.class)
+    public ApiResponse<Void> handleBizException(BizException ex) {
+        return ApiResponse.fail(ex.getCode(), ex.getMessage());
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ApiResponse<Void> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
@@ -36,6 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception ex) {
-        return ApiResponse.fail(500, ex.getMessage());
+        log.error("未处理的异常: {}", ex.getMessage(), ex);
+        return ApiResponse.fail(500, "服务器内部错误，请稍后重试");
     }
 }
