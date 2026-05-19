@@ -3,6 +3,8 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import { ArrowDown } from '@element-plus/icons-vue'
+import ContentFormDialog from '../components/content/ContentFormDialog.vue'
+import ContentListPanel from '../components/content/ContentListPanel.vue'
 import {
   createContent,
   createContentExternalRef,
@@ -189,6 +191,7 @@ const filters = reactive({
 })
 const formRef = ref()
 const externalRefFormRef = ref()
+const contentFormDialogRef = ref()
 const githubImportFormRef = ref()
 const aiSourceFormRef = ref()
 const previewMode = ref('card')
@@ -800,7 +803,7 @@ function fillContentFormFromAiSource() {
   externalRefs.value = []
   aiSourceDialogVisible.value = false
   dialogVisible.value = true
-  nextTick(() => formRef.value?.clearValidate())
+  nextTick(() => contentFormDialogRef.value?.clearValidate())
   ElMessage.success('AI 生成结果已回填到内容编辑表单，可继续人工修改')
 }
 
@@ -815,7 +818,7 @@ function openCreateExternalRef() {
   }
   resetExternalRefForm()
   externalRefDialogVisible.value = true
-  nextTick(() => externalRefFormRef.value?.clearValidate())
+  nextTick(() => contentFormDialogRef.value?.clearExternalRefValidate())
 }
 
 function openEditExternalRef(item) {
@@ -826,7 +829,7 @@ function openEditExternalRef(item) {
   externalRefForm.rawPayloadJson = item.rawPayloadJson || ''
   externalRefForm.syncedAt = item.syncedAt ? item.syncedAt.replace(' ', 'T') : ''
   externalRefDialogVisible.value = true
-  nextTick(() => externalRefFormRef.value?.clearValidate())
+  nextTick(() => contentFormDialogRef.value?.clearExternalRefValidate())
 }
 
 async function refreshContentDetail() {
@@ -842,7 +845,7 @@ async function submitExternalRef() {
     ElMessage.warning('请先保存内容，再维护外部引用')
     return
   }
-  await externalRefFormRef.value.validate()
+  await contentFormDialogRef.value.externalRefFormRef.validate()
   try {
     const payload = {
       ...externalRefForm,
@@ -934,7 +937,7 @@ function clearFilters() {
 function openCreate() {
   resetForm()
   dialogVisible.value = true
-  nextTick(() => formRef.value?.clearValidate())
+  nextTick(() => contentFormDialogRef.value?.clearValidate())
 }
 
 function openGitHubImport() {
@@ -985,14 +988,14 @@ async function openEdit(row) {
     previewMode.value = 'detail'
     editorTab.value = 'basic'
     dialogVisible.value = true
-    nextTick(() => formRef.value?.clearValidate())
+    nextTick(() => contentFormDialogRef.value?.clearValidate())
   } catch (error) {
     ElMessage.error(error.message)
   }
 }
 
 async function submit() {
-  await formRef.value.validate()
+  await contentFormDialogRef.value.formRef.validate()
   try {
     const payload = {
       ...form,
@@ -1014,7 +1017,7 @@ async function submit() {
 }
 
 function handleDialogClosed() {
-  formRef.value?.clearValidate()
+  contentFormDialogRef.value?.clearValidate()
 }
 
 async function handleDelete(id) {
@@ -1202,67 +1205,25 @@ onMounted(initialize)
       <h3>内容管理</h3>
     </div>
 
-    <div class="card-panel">
-      <div class="toolbar-row toolbar-row--wrap">
-        <el-input
-          v-model="filters.keyword"
-          placeholder="搜索标题"
-          class="toolbar-input"
-          clearable
-          @keyup.enter="handleSearch"
-        />
-        <el-button type="primary" @click="handleSearch">查询</el-button>
-        <el-button @click="clearFilters">清空筛选</el-button>
-      </div>
-      <div class="type-tab-strip">
-        <button
-          v-for="item in contentOptions.contentTypes"
-          :key="item.value"
-          :class="['type-tab', { active: filters.contentType === item.value }]"
-          @click="filters.contentType = item.value; handleSearch()"
-        >{{ item.label }}</button>
-      </div>
-      <div v-if="filters.contentType === 'paper'" class="sub-cat-strip">
-        <button
-          :class="['sub-cat', { active: !filters.subCategory }]"
-          @click="filters.subCategory = ''; handleSearch()"
-        >全部论文</button>
-        <button
-          :class="['sub-cat', { active: filters.subCategory === '3d_ct_denoising' }]"
-          @click="filters.subCategory = '3d_ct_denoising'; handleSearch()"
-        >3D CT 去噪</button>
-        <button
-          :class="['sub-cat', { active: filters.subCategory === 'medical_imaging' }]"
-          @click="filters.subCategory = 'medical_imaging'; handleSearch()"
-        >医学影像</button>
-        <button
-          :class="['sub-cat', { active: filters.subCategory === 'large_model' }]"
-          @click="filters.subCategory = 'large_model'; handleSearch()"
-        >大模型</button>
-      </div>
-
-      <div class="content-list">
-        <div v-for="item in contents" :key="item.id" class="content-row" @click="openEdit(item)">
-          <div class="row-title">{{ item.title }}</div>
-          <div class="row-cat">{{ item.categoryName || '未分类' }}</div>
-          <div class="row-date">{{ formatDateTime(item.publishedAt) }}</div>
-          <div class="row-ops">
-            <el-button link type="danger" size="small" @click.stop="handleDelete(item.id)">删除</el-button>
-          </div>
-        </div>
-      </div>
-
-      <div class="pagination-row">
-        <el-pagination
-          background
-          layout="prev, pager, next, total"
-          :current-page="pagination.pageNum"
-          :page-size="pagination.pageSize"
-          :total="pagination.total"
-          @current-change="(page) => { pagination.pageNum = page; loadContents() }"
-        />
-      </div>
-    </div>
+    <ContentListPanel
+      :content-list="contents"
+      :loading="loading"
+      :total="pagination.total"
+      :page-num="pagination.pageNum"
+      :page-size="pagination.pageSize"
+      :active-type="filters.contentType"
+      :active-sub-category="filters.subCategory"
+      :keyword="filters.keyword"
+      :content-types="contentOptions.contentTypes"
+      @page-change="(page) => { pagination.pageNum = page; loadContents() }"
+      @type-change="(type) => { filters.contentType = type; handleSearch() }"
+      @sub-category-change="(subCat) => { filters.subCategory = subCat; handleSearch() }"
+      @edit="openEdit"
+      @delete="handleDelete"
+      @search="handleSearch"
+      @clear="clearFilters"
+      @update:keyword="(value) => { filters.keyword = value }"
+    />
 
     <el-dialog
       v-model="dialogVisible"
