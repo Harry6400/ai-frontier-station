@@ -36,7 +36,7 @@ async function fetchPapers() {
       dataset: '',
       abstract: r.summary || '',
       date: r.publishedAt?.split('T')[0] || '',
-      paperLink: r.sourceUrl || '#',
+      paperLink: `/contents/${r.id}`,
       codeLink: null,
       subCategory: r.subCategory || ''
     }))
@@ -128,7 +128,7 @@ const filteredPapers = computed(() => {
         <section v-if="expanded" class="top-papers">
           <h3>本周热门论文</h3>
           <ul>
-            <li v-for="p in papers.slice(0, 3)" :key="p.id">
+            <li v-for="p in allPapers.slice(0, 3)" :key="p.id">
               <span class="top-rank">#{{ p.rank }}</span>
               <span class="top-title">{{ p.title }}</span>
             </li>

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import PortalTopbar from '../components/PortalTopbar.vue'
 import { usePortalStore } from '../stores/usePortalStore'
-import { getPortalHome } from '../api/portal'
+import { getPortalHome, getPortalContents } from '../api/portal'
 import { formatDateTime, getContentTypeMeta } from '../utils/content'
 
 const portalStore = usePortalStore()
@@ -13,6 +13,7 @@ const latestCards = ref([])
 const categories = ref([])
 const sources = ref([])
 const allContents = ref([])
+const allContentForCounts = ref([])
 const sidebarCollapsed = ref(false)
 
 function toggleSidebar() {
@@ -30,7 +31,7 @@ const navSections = [
 
 const typeCountMap = computed(() => {
   const map = {}
-  for (const item of allContents.value) {
+  for (const item of allContentForCounts.value) {
     const t = item.contentType || 'unknown'
     map[t] = (map[t] || 0) + 1
   }
@@ -42,7 +43,7 @@ function getSectionCount(ct) {
 }
 
 const statCards = computed(() => [
-  { label: '已收录', value: allContents.value.length, note: '全部内容' },
+  { label: '已收录', value: allContentForCounts.value.length, note: '全部内容' },
   { label: '论文', value: getSectionCount('paper'), note: 'arXiv + HuggingFace' },
   { label: '项目', value: getSectionCount('project'), note: 'GitHub 导入' },
   { label: '数据源', value: sources.value.length, note: '多源聚合' }
@@ -66,11 +67,14 @@ async function loadHome() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await getPortalHome()
-    featuredCards.value = res.data.featuredContents || []
-    latestCards.value = res.data.latestContents || []
-    categories.value = res.data.categories || []
-    sources.value = res.data.sources || []
+    const [homeRes, contentsRes] = await Promise.all([
+      getPortalHome(),
+      getPortalContents({ pageNum: 1, pageSize: 500 })
+    ])
+    featuredCards.value = homeRes.data.featuredContents || []
+    latestCards.value = homeRes.data.latestContents || []
+    categories.value = homeRes.data.categories || []
+    sources.value = homeRes.data.sources || []
     const merged = [...featuredCards.value, ...latestCards.value]
     const seen = new Set()
     const unique = []
@@ -81,6 +85,8 @@ async function loadHome() {
       }
     }
     allContents.value = unique
+    // Fetch all published content for accurate counts
+    allContentForCounts.value = contentsRes.data?.records || []
   } catch (error) {
     errorMessage.value = error.message
   } finally {

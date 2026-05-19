@@ -191,10 +191,11 @@ public class EventServiceImpl implements EventService {
                 "1. 只聚类确实相关的文章（同一公司/产品/技术方向）\n" +
                 "2. 不要强行聚类，如果某篇文章不属于任何事件，跳过它\n" +
                 "3. 每个事件至少包含2篇文章\n" +
-                "4. 用中文生成事件标题、摘要和描述\n\n" +
+                "4. 用中文生成事件标题、摘要和描述\n" +
+                "5. 为每个事件分配一个分类：policy(AI政策法规)、research(AI研究进展)、practice(AI行业实践)、other(其他)\n\n" +
                 "文章列表：\n" + contentList +
                 "\n请严格以JSON数组格式输出，不要添加其他内容：\n" +
-                "[{\"title\": \"中文事件标题\", \"summary\": \"2-3句中文摘要\", \"description\": \"详细中文描述（Markdown格式，包含背景、影响、发展趋势等）\", \"contentIds\": [1, 3, 5]}, ...]";
+                "[{\"title\": \"中文事件标题\", \"summary\": \"2-3句中文摘要\", \"description\": \"详细中文描述（Markdown格式，包含背景、影响、发展趋势等）\", \"category\": \"policy/research/practice/other\", \"contentIds\": [1, 3, 5]}, ...]";
 
         try {
             Map<String, Object> body = Map.of(
@@ -276,6 +277,7 @@ public class EventServiceImpl implements EventService {
                     // Create new event with AI-generated content
                     String eventSummary = cluster.path("summary").asText("AI自动聚类");
                     String eventDescription = cluster.path("description").asText("");
+                    String category = cluster.path("category").asText("other");
 
                     ContentEvent event = new ContentEvent();
                     event.setTitle(eventTitle);
@@ -284,6 +286,8 @@ public class EventServiceImpl implements EventService {
                     event.setContentCount(contentIds.size());
                     event.setViewCount(0);
                     event.setStatus("pending");
+                    // Store category in tags JSON
+                    event.setTags(buildTagsWithCategory(category));
                     eventMapper.insert(event);
 
                     for (Long cid : contentIds) {
@@ -460,6 +464,24 @@ public class EventServiceImpl implements EventService {
             return objectMapper.readValue(tagsJson, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Build a tags JSON array string containing the category label.
+     */
+    private String buildTagsWithCategory(String category) {
+        Map<String, String> categoryLabels = Map.of(
+                "policy", "AI政策法规",
+                "research", "AI研究进展",
+                "practice", "AI行业实践",
+                "other", "其他"
+        );
+        String label = categoryLabels.getOrDefault(category, "其他");
+        try {
+            return objectMapper.writeValueAsString(List.of(label));
+        } catch (Exception e) {
+            return "[\"" + label + "\"]";
         }
     }
 

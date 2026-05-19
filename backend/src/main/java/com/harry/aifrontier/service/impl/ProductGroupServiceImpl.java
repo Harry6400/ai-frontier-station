@@ -71,24 +71,35 @@ public class ProductGroupServiceImpl implements ProductGroupService {
 
     /**
      * Extract a product key from the candidate title.
-     * Uses the first meaningful word/phrase as the product identifier.
+     * Uses the company/product name as the group identifier.
+     * Keeps company prefix (OpenAI, Google, etc.) so events can show "{Company}最新动态".
      */
     private String extractProductKey(ContentCandidate candidate) {
         String title = candidate.getTitle();
         if (title == null || title.isBlank()) {
             return "unknown";
         }
-        // Try to extract product name: take first segment before common delimiters
-        String key = title.split("[：:|\\-–—]")[0].trim().toLowerCase();
-        // Remove common prefixes
-        key = key.replaceAll("^(openai|google|meta|microsoft|anthropic|nvidia)\\s+", "");
-        return key.isEmpty() ? title.toLowerCase().trim() : key;
+        // Extract company/product name: take first segment before common delimiters
+        String key = title.split("[：:|\\-–—]")[0].trim();
+        // If the first segment is very long, try to extract the brand name
+        if (key.length() > 30) {
+            // Take first 2 words as the product/company name
+            String[] words = key.split("\\s+");
+            if (words.length >= 2) {
+                key = words[0] + " " + words[1];
+            } else {
+                key = key.substring(0, Math.min(30, key.length()));
+            }
+        }
+        return key.isEmpty() ? title.trim() : key;
     }
 
     /**
      * Tag a candidate with group metadata.
+     * Stores product group key and a suggested event title like "{ProductName}最新动态".
      */
     private void tagWithGroup(ContentCandidate candidate, String productKey, int groupSize) {
+        String suggestedTitle = productKey + "最新动态";
         String existingMeta = candidate.getMetadataJson();
         StringBuilder meta;
         if (existingMeta != null && !existingMeta.isBlank()) {
@@ -97,14 +108,17 @@ public class ProductGroupServiceImpl implements ProductGroupService {
             int lastBrace = meta.lastIndexOf("}");
             if (lastBrace > 0) {
                 meta.insert(lastBrace, ", \"productGroup\": \"" + escapeJson(productKey)
-                        + "\", \"productGroupSize\": " + groupSize);
+                        + "\", \"productGroupSize\": " + groupSize
+                        + ", \"suggestedEventTitle\": \"" + escapeJson(suggestedTitle) + "\"");
             }
         } else {
             meta = new StringBuilder("{\"productGroup\": \"")
                     .append(escapeJson(productKey))
                     .append("\", \"productGroupSize\": ")
                     .append(groupSize)
-                    .append("}");
+                    .append(", \"suggestedEventTitle\": \"")
+                    .append(escapeJson(suggestedTitle))
+                    .append("\"}");
         }
         candidate.setMetadataJson(meta.toString());
         candidate.setUpdatedAt(LocalDateTime.now());
