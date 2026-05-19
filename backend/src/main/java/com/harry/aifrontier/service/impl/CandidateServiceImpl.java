@@ -48,6 +48,8 @@ public class CandidateServiceImpl implements CandidateService {
     private final ApiCredentialService apiCredentialService;
     private final ApiCredentialMapper apiCredentialMapper;
     private final EventService eventService;
+    private final AutoPublishService autoPublishService;
+    private final ProductGroupService productGroupService;
 
     @Value("${app.bailian.api-key:}")
     private String bailianApiKey;
@@ -306,12 +308,31 @@ public class CandidateServiceImpl implements CandidateService {
                 throw BizException.badRequest("暂不支持的数据源类型: " + sourceType);
         }
 
-        // Auto-cluster after fetch
-        try {
-            int events = eventService.autoCluster();
-            log.info("Auto-cluster after fetch {}: {} events created", sourceType, events);
-        } catch (Exception e) {
-            log.warn("Auto-cluster after fetch failed: {}", e.getMessage());
+        // Post-fetch processing: different pipeline per type
+        if (count > 0) {
+            try {
+                switch (sourceType) {
+                    case "github":
+                    case "tools":
+                    case "arena":
+                        // Pipeline A: auto-publish (no admin review)
+                        int published = autoPublishService.publishPending(sourceType);
+                        log.info("Pipeline A after fetch {}: {} auto-published", sourceType, published);
+                        break;
+                    case "news":
+                        // Pipeline B: cluster into events
+                        int events = eventService.autoCluster();
+                        log.info("Pipeline B after fetch {}: {} events clustered", sourceType, events);
+                        break;
+                    case "product":
+                        // Pipeline C: group by product
+                        int grouped = productGroupService.autoGroup();
+                        log.info("Pipeline C after fetch {}: {} products grouped", sourceType, grouped);
+                        break;
+                }
+            } catch (Exception e) {
+                log.warn("Post-fetch processing failed for {}: {}", sourceType, e.getMessage());
+            }
         }
 
         return count;
