@@ -5,6 +5,7 @@ import com.harry.aifrontier.common.api.ApiResponse;
 import com.harry.aifrontier.common.api.PageResult;
 import com.harry.aifrontier.entity.ContentCandidate;
 import com.harry.aifrontier.service.CandidateService;
+import com.harry.aifrontier.service.AutoPublishService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import java.util.Map;
 public class CandidateAdminController {
 
     private final CandidateService candidateService;
+    private final AutoPublishService autoPublishService;
 
     /**
      * List candidates with optional filters
@@ -104,5 +106,11 @@ public class CandidateAdminController {
     public ApiResponse<Void> savePrompt(@RequestBody Map<String, String> body) {
         candidateService.saveCustomPrompt(body.get("prompt"));
         return ApiResponse.success(null);
+    }
+
+    @PostMapping("/publish/{sourceType}")
+    public ApiResponse<Integer> publishPending(@PathVariable String sourceType) {
+        int count = autoPublishService.publishPending(sourceType);
+        return ApiResponse.success("发布完成，处理 " + count + " 条", count);
     }
 }

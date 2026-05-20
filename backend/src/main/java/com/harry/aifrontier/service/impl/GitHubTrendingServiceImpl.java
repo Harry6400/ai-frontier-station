@@ -62,10 +62,7 @@ public class GitHubTrendingServiceImpl implements GitHubTrendingService {
 
         try {
             // 使用 GitHub Search API 搜索最近活跃的 AI 仓库
-            String query = "stars:>50 pushed:>" + sevenDaysAgo
-                    + " (topic:ai OR topic:machine-learning OR topic:llm OR topic:deep-learning"
-                    + " OR topic:generative-ai OR topic:ai-agent OR topic:diffusion"
-                    + " OR topic:nlp OR topic:computer-vision)";
+            String query = "topic:ai stars:>500 pushed:>" + sevenDaysAgo;
 
             JsonNode result = githubClient()
                     .get()

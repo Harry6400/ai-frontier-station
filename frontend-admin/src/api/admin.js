@@ -181,3 +181,6 @@ export function rejectEvent(id) {
 export function triggerAutoCluster() {
   return http.post('/admin/events/auto-cluster')
 }
+export function getEventDetail(id) {
+  return http.get(`/admin/events/${id}`)
+}

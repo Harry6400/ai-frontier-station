@@ -10,7 +10,8 @@ import {
   approveEvent,
   rejectEvent,
   triggerAutoCluster,
-  getContents
+  getContents,
+  getEventDetail
 } from '../api/admin'
 
 /* ── fetch groups ── */
@@ -33,6 +34,10 @@ const eventLoading = ref(false)
 const eventTotal = ref(0)
 const eventPage = ref(1)
 const eventPageSize = ref(10)
+const expandedEventId = ref(null)
+const expandedEventDetail = ref(null)
+const eventDetailLoading = ref(false)
+const eventDetailTab = ref('body')
 
 /* ── recent auto-published state ── */
 const recentList = ref([])
@@ -161,6 +166,27 @@ function handleEventPageChange(p) {
   loadEvents()
 }
 
+async function toggleEventExpand(event) {
+  if (expandedEventId.value === event.id) {
+    expandedEventId.value = null
+    expandedEventDetail.value = null
+    eventDetailTab.value = 'body'
+    return
+  }
+  expandedEventId.value = event.id
+  eventDetailTab.value = 'body'
+  eventDetailLoading.value = true
+  try {
+    const res = await getEventDetail(event.id)
+    expandedEventDetail.value = res.data
+  } catch (err) {
+    ElMessage.error('加载事件详情失败：' + (err.response?.data?.message || err.message))
+    expandedEventDetail.value = null
+  } finally {
+    eventDetailLoading.value = false
+  }
+}
+
 /* ── recent auto-published ── */
 async function loadRecentPublished() {
   recentLoading.value = true
@@ -275,31 +301,130 @@ onMounted(() => {
         暂无待审核事件
       </div>
       <div v-else class="event-list">
-        <div v-for="event in eventList" :key="event.id" class="event-card">
-          <div class="event-card-body">
-            <div class="event-title">{{ event.title }}</div>
-            <div class="event-summary">{{ event.summary }}</div>
-            <div class="event-meta">
-              <el-tag size="small" type="info">
-                {{ event.contentCount || event.contents?.length || 0 }} 条关联内容
-              </el-tag>
-              <span v-if="event.status" class="event-status-tag">
-                <el-tag
-                  size="small"
-                  :type="event.status === 'approved' ? 'success' : event.status === 'rejected' ? 'danger' : 'warning'"
-                >
-                  {{ event.status === 'approved' ? '已批准' : event.status === 'rejected' ? '已拒绝' : '待审核' }}
+        <div v-for="event in eventList" :key="event.id" class="event-card-wrapper">
+          <div
+            class="event-card"
+            :class="{ 'event-card--expanded': expandedEventId === event.id }"
+            @click="toggleEventExpand(event)"
+          >
+            <div class="event-card-body">
+              <div class="event-title">{{ event.title }}</div>
+              <div class="event-summary">{{ event.summary }}</div>
+              <div class="event-meta">
+                <el-tag size="small" type="info">
+                  {{ event.contentCount || event.contents?.length || 0 }} 条关联内容
                 </el-tag>
-              </span>
+                <span v-if="event.status" class="event-status-tag">
+                  <el-tag
+                    size="small"
+                    :type="event.status === 'approved' ? 'success' : event.status === 'rejected' ? 'danger' : 'warning'"
+                  >
+                    {{ event.status === 'approved' ? '已批准' : event.status === 'rejected' ? '已拒绝' : '待审核' }}
+                  </el-tag>
+                </span>
+                <span class="event-expand-hint">
+                  {{ expandedEventId === event.id ? '收起详情 ▲' : '展开详情 ▼' }}
+                </span>
+              </div>
+            </div>
+            <div
+              class="event-card-actions"
+              v-if="event.status !== 'approved' && event.status !== 'rejected'"
+              @click.stop
+            >
+              <button class="cd-btn cd-btn-primary" @click.stop="handleApproveEvent(event)">✓ 批准</button>
+              <button class="cd-btn cd-btn-outline-danger" @click.stop="handleRejectEvent(event)">✗ 拒绝</button>
             </div>
           </div>
-          <div
-            class="event-card-actions"
-            v-if="event.status !== 'approved' && event.status !== 'rejected'"
-          >
-            <button class="cd-btn cd-btn-primary" @click="handleApproveEvent(event)">✓ 批准</button>
-            <button class="cd-btn cd-btn-outline-danger" @click="handleRejectEvent(event)">✗ 拒绝</button>
-          </div>
+
+          <!-- ═══ Expanded Detail Panel ═══ -->
+          <transition name="slide-down">
+            <div v-if="expandedEventId === event.id" class="event-detail-panel">
+              <div v-if="eventDetailLoading" class="event-detail-loading">
+                <span class="event-loading-spinner"></span>
+                加载详情中...
+              </div>
+              <div v-else-if="expandedEventDetail" class="event-detail-content">
+                <!-- Sidebar: Event Info -->
+                <div class="event-detail-sidebar">
+                  <div class="event-detail-sidebar-title">{{ expandedEventDetail.title }}</div>
+                  <div class="event-detail-sidebar-summary">{{ expandedEventDetail.summary }}</div>
+                  <div class="event-detail-sidebar-status">
+                    <el-tag
+                      size="small"
+                      :type="expandedEventDetail.status === 'approved' ? 'success' : expandedEventDetail.status === 'rejected' ? 'danger' : 'warning'"
+                    >
+                      {{ expandedEventDetail.status === 'approved' ? '已批准' : expandedEventDetail.status === 'rejected' ? '已拒绝' : '待审核' }}
+                    </el-tag>
+                  </div>
+                  <div
+                    v-if="expandedEventDetail.status !== 'approved' && expandedEventDetail.status !== 'rejected'"
+                    class="event-detail-sidebar-actions"
+                  >
+                    <button class="cd-btn cd-btn-primary" style="width:100%;" @click="handleApproveEvent(expandedEventDetail)">✓ 批准</button>
+                    <button class="cd-btn cd-btn-outline-danger" style="width:100%;" @click="handleRejectEvent(expandedEventDetail)">✗ 拒绝</button>
+                  </div>
+                </div>
+
+                <!-- Main Content: Tabs -->
+                <div class="event-detail-main">
+                  <div class="event-detail-tabs">
+                    <button
+                      class="event-detail-tab"
+                      :class="{ active: eventDetailTab === 'body' }"
+                      @click="eventDetailTab = 'body'"
+                    >📄 正文</button>
+                    <button
+                      class="event-detail-tab"
+                      :class="{ active: eventDetailTab === 'sources' }"
+                      @click="eventDetailTab = 'sources'"
+                    >🔗 内容来源
+                      <span v-if="expandedEventDetail.contents?.length" class="tab-badge">
+                        {{ expandedEventDetail.contents.length }}
+                      </span>
+                    </button>
+                  </div>
+
+                  <!-- Tab: 正文 -->
+                  <div v-if="eventDetailTab === 'body'" class="event-detail-body">
+                    <div v-if="expandedEventDetail.aiDescription || expandedEventDetail.description" class="event-detail-body-text">
+                      <pre>{{ expandedEventDetail.aiDescription || expandedEventDetail.description }}</pre>
+                    </div>
+                    <div v-else class="event-detail-empty">
+                      暂无正文内容
+                    </div>
+                  </div>
+
+                  <!-- Tab: 内容来源 -->
+                  <div v-if="eventDetailTab === 'sources'" class="event-detail-sources">
+                    <div v-if="!expandedEventDetail.contents?.length" class="event-detail-empty">
+                      暂无关联内容
+                    </div>
+                    <div v-else class="source-list">
+                      <div v-for="item in expandedEventDetail.contents" :key="item.id" class="source-item">
+                        <div class="source-item-header">
+                          <a
+                            v-if="item.url || item.originalUrl"
+                            :href="item.url || item.originalUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="source-item-title"
+                          >{{ item.title || '未命名' }}</a>
+                          <span v-else class="source-item-title">{{ item.title || '未命名' }}</span>
+                          <el-tag v-if="item.sourceType" size="small" effect="plain" class="source-item-type">
+                            {{ item.sourceType === 'github' ? 'GitHub' : item.sourceType === 'tools' ? '工具实践' : item.sourceType === 'news' ? 'AI资讯' : item.sourceType === 'product' ? '产品动态' : item.sourceType }}
+                          </el-tag>
+                        </div>
+                        <div v-if="item.summary || item.aiSummary" class="source-item-summary">
+                          {{ truncateText(item.summary || item.aiSummary, 120) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
         <div v-if="eventTotal > eventPageSize" class="event-pagination">
           <el-pagination
@@ -776,5 +901,246 @@ onMounted(() => {
 
 .cd-btn-outline-danger:hover:not(:disabled) {
   background: #fef2f2;
+}
+
+/* ═══════════════════════════════════════════
+   EVENT DETAIL PANEL
+═══════════════════════════════════════════ */
+.event-card-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.event-card {
+  cursor: pointer;
+}
+
+.event-card--expanded {
+  border-color: var(--admin-primary, #3b82f6);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+}
+
+.event-expand-hint {
+  font-size: 12px;
+  color: var(--admin-text-secondary, #9ca3af);
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.event-card:hover .event-expand-hint {
+  color: var(--admin-primary, #3b82f6);
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-8px);
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  opacity: 1;
+  max-height: 800px;
+}
+
+.event-detail-panel {
+  background: var(--admin-surface, #fff);
+  border: 1px solid var(--admin-primary, #3b82f6);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  margin-top: -1px;
+  overflow: hidden;
+}
+
+.event-detail-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--admin-text-secondary, #6b7280);
+  font-size: 14px;
+}
+
+.event-detail-content {
+  display: flex;
+  gap: 0;
+  min-height: 200px;
+}
+
+.event-detail-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 16px;
+  background: var(--admin-surface-secondary, #f9fafb);
+  border-right: 1px solid var(--admin-border, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-detail-sidebar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-text, #1f2937);
+  line-height: 1.4;
+}
+
+.event-detail-sidebar-summary {
+  font-size: 13px;
+  color: var(--admin-text-secondary, #6b7280);
+  line-height: 1.5;
+}
+
+.event-detail-sidebar-status {
+  display: flex;
+  align-items: center;
+}
+
+.event-detail-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.event-detail-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-detail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--admin-border, #e5e7eb);
+  background: var(--admin-surface, #fff);
+  padding: 0 16px;
+}
+
+.event-detail-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--admin-text-secondary, #6b7280);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.event-detail-tab:hover {
+  color: var(--admin-primary, #3b82f6);
+}
+
+.event-detail-tab.active {
+  color: var(--admin-primary, #3b82f6);
+  border-bottom-color: var(--admin-primary, #3b82f6);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--admin-primary, #3b82f6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-detail-body,
+.event-detail-sources {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.event-detail-body-text pre {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--admin-text, #1f2937);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+.event-detail-empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--admin-text-secondary, #9ca3af);
+  font-size: 14px;
+}
+
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-item {
+  padding: 12px 14px;
+  background: var(--admin-surface-secondary, #f9fafb);
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 6px;
+  transition: border-color 0.15s;
+}
+
+.source-item:hover {
+  border-color: var(--admin-primary, #3b82f6);
+}
+
+.source-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.source-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-primary, #2563eb);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-item-title:hover {
+  text-decoration: underline;
+}
+
+span.source-item-title {
+  color: var(--admin-text, #1f2937);
+  cursor: default;
+}
+
+.source-item-type {
+  flex-shrink: 0;
+}
+
+.source-item-summary {
+  font-size: 12px;
+  color: var(--admin-text-secondary, #6b7280);
+  line-height: 1.5;
 }
 </style>

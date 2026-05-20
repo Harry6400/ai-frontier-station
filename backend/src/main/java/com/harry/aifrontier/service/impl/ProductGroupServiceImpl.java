@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.Map.entry;
+
 /**
  * Pipeline C: group product-update candidates by product name.
  * Merges metadata so that related updates are discoverable as a group.
@@ -22,6 +24,27 @@ import java.util.stream.Collectors;
 public class ProductGroupServiceImpl implements ProductGroupService {
 
     private final ContentCandidateMapper candidateMapper;
+
+    /**
+     * Product keyword mapping: maps known brand/product keywords to a canonical group name.
+     * This ensures titles containing ByteDance, Xiaomi, etc. are grouped correctly.
+     */
+    private static final Map<String, String> PRODUCT_KEYWORD_MAP = Map.ofEntries(
+            // ByteDance / 字节跳动
+            entry("字节", "ByteDance"),
+            entry("字节跳动", "ByteDance"),
+            entry("ByteDance", "ByteDance"),
+            entry("bytedance", "ByteDance"),
+            entry("Trae", "ByteDance"),
+            entry("trae", "ByteDance"),
+            entry("豆包", "ByteDance"),
+            // Xiaomi / 小米
+            entry("小米", "Xiaomi"),
+            entry("Xiaomi", "Xiaomi"),
+            entry("xiaomi", "Xiaomi"),
+            entry("MiMo", "Xiaomi"),
+            entry("mimo", "Xiaomi")
+    );
 
     @Override
     public int autoGroup() {
@@ -79,11 +102,18 @@ public class ProductGroupServiceImpl implements ProductGroupService {
         if (title == null || title.isBlank()) {
             return "unknown";
         }
-        // Extract company/product name: take first segment before common delimiters
+
+        // Check known product keywords first (case-insensitive scan)
+        String titleLower = title.toLowerCase();
+        for (Map.Entry<String, String> kw : PRODUCT_KEYWORD_MAP.entrySet()) {
+            if (titleLower.contains(kw.getKey().toLowerCase())) {
+                return kw.getValue();
+            }
+        }
+
+        // Fallback: extract company/product name from delimiters
         String key = title.split("[：:|\\-–—]")[0].trim();
-        // If the first segment is very long, try to extract the brand name
         if (key.length() > 30) {
-            // Take first 2 words as the product/company name
             String[] words = key.split("\\s+");
             if (words.length >= 2) {
                 key = words[0] + " " + words[1];
