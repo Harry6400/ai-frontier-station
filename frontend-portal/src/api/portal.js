@@ -25,3 +25,16 @@ export function getContentByType(contentType, params = {}) {
     params: { contentType, ...params }
   })
 }
+
+// 模型竞技场 API
+export function getArenaRanking() {
+  return http.get('/arena/ranking')
+}
+
+export function getArenaTrend(modelId) {
+  return http.get('/arena/trend', { params: { modelId } })
+}
+
+export function getArenaAnalysis() {
+  return http.get('/arena/analysis')
+}

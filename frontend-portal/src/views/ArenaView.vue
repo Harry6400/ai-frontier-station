@@ -1,21 +1,17 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import * as echarts from 'echarts'
 import PortalTopbar from '../components/PortalTopbar.vue'
 import { getContentByType } from '../api/portal'
 
-// Tab 数据源
-const sources = [
-  { id: 'arena', name: 'Chatbot Arena', badge: '每日更新', active: true },
-  { id: 'opencompass', name: 'OpenCompass', badge: '即将接入', active: false },
-  { id: 'alpaca', name: 'AlpacaEval', badge: '即将接入', active: false }
-]
-const activeSource = ref('arena')
+// 侧边栏导航
+const activeTab = ref('ranking')
 
 // 分类标签
 const categories = ['总榜', '编程', '数学', '创意写作', '中文', '多模态']
 const activeCategory = ref('总榜')
 
-// 模拟 ELO 排名数据
+// 模拟 ELO 排名数据（Top 15）
 const models = ref([
   { rank: 1, name: 'Gemini 2.5 Pro', org: 'Google', elo: 1342, change: 2, votes: 28456, color: '#4285F4' },
   { rank: 2, name: 'GPT-4o', org: 'OpenAI', elo: 1338, change: 0, votes: 31289, color: '#10A37F' },
@@ -26,18 +22,207 @@ const models = ref([
   { rank: 7, name: 'Mistral Large', org: 'Mistral AI', elo: 1278, change: -2, votes: 14567, color: '#EC4899' },
   { rank: 8, name: 'GLM-4-Plus', org: 'Zhipu AI', elo: 1265, change: 0, votes: 12345, color: '#14B8A6' },
   { rank: 9, name: 'Command R+', org: 'Cohere', elo: 1258, change: -1, votes: 11234, color: '#8B5CF6' },
-  { rank: 10, name: 'Yi-Lightning', org: '01.AI', elo: 1250, change: 2, votes: 10123, color: '#EF4444' }
+  { rank: 10, name: 'Yi-Lightning', org: '01.AI', elo: 1250, change: 2, votes: 10123, color: '#EF4444' },
+  { rank: 11, name: 'Grok-2', org: 'xAI', elo: 1245, change: 1, votes: 9876, color: '#6366F1' },
+  { rank: 12, name: 'Phi-4', org: 'Microsoft', elo: 1238, change: -1, votes: 8765, color: '#0EA5E9' },
+  { rank: 13, name: 'InternLM-3', org: 'Shanghai AI Lab', elo: 1230, change: 3, votes: 7654, color: '#D946EF' },
+  { rank: 14, name: 'Jamba-1.5', org: 'AI21 Labs', elo: 1225, change: 0, votes: 6543, color: '#F59E0B' },
+  { rank: 15, name: 'DBRX', org: 'Databricks', elo: 1218, change: -2, votes: 5432, color: '#64748B' }
 ])
 
-// AI 解读 - 从后端获取
-const aiSummary = ref({
-  highlights: [],
-  date: new Date().toISOString().slice(0, 10)
-})
+// 30天趋势数据
+const trendModels = ref([
+  { name: 'Gemini 2.5 Pro', color: '#4285F4', data: [1320, 1322, 1325, 1324, 1328, 1330, 1329, 1332, 1335, 1334, 1336, 1338, 1337, 1339, 1340, 1338, 1340, 1341, 1339, 1340, 1341, 1343, 1342, 1344, 1343, 1341, 1342, 1343, 1344, 1342] },
+  { name: 'GPT-4o', color: '#10A37F', data: [1340, 1341, 1340, 1339, 1340, 1341, 1340, 1339, 1338, 1339, 1340, 1339, 1338, 1337, 1338, 1339, 1338, 1337, 1338, 1339, 1338, 1337, 1338, 1339, 1338, 1337, 1338, 1339, 1338, 1338] },
+  { name: 'Claude 3.5 Sonnet', color: '#D97706', data: [1338, 1337, 1338, 1337, 1336, 1337, 1338, 1337, 1336, 1335, 1336, 1337, 1336, 1335, 1334, 1335, 1336, 1335, 1334, 1335, 1336, 1335, 1334, 1335, 1336, 1335, 1334, 1335, 1336, 1335] },
+  { name: 'DeepSeek-V3', color: '#7C3AED', data: [1280, 1282, 1285, 1284, 1287, 1290, 1289, 1292, 1295, 1294, 1296, 1298, 1297, 1300, 1302, 1301, 1303, 1305, 1304, 1306, 1305, 1307, 1308, 1309, 1308, 1307, 1308, 1309, 1310, 1310] },
+  { name: 'Llama 3.1', color: '#0EA5E9', data: [1300, 1301, 1300, 1299, 1300, 1301, 1300, 1299, 1298, 1299, 1300, 1299, 1298, 1297, 1298, 1299, 1298, 1297, 1298, 1299, 1298, 1297, 1298, 1299, 1298, 1297, 1298, 1299, 1298, 1298] }
+])
+
+// AI 解读数据
 const arenaContents = ref([])
 const arenaLoading = ref(true)
+const today = new Date().toISOString().slice(0, 10)
+
+// ECharts 实例
+const rankingChartRef = ref(null)
+const trendChartRef = ref(null)
+let rankingChart = null
+let trendChart = null
+
+// 获取当前主题色
+function getThemeColors() {
+  const style = getComputedStyle(document.documentElement)
+  return {
+    text: style.getPropertyValue('--text-main').trim() || '#1a1a2e',
+    textSecondary: style.getPropertyValue('--text-secondary').trim() || '#64748b',
+    textTertiary: style.getPropertyValue('--text-tertiary').trim() || '#94a3b8',
+    line: style.getPropertyValue('--line').trim() || '#e2e8f0',
+    paper: style.getPropertyValue('--paper').trim() || '#ffffff',
+    canvas: style.getPropertyValue('--canvas').trim() || '#f8fafc',
+    accent: style.getPropertyValue('--accent').trim() || '#6366f1'
+  }
+}
+
+// 初始化排名柱状图
+function initRankingChart() {
+  if (!rankingChartRef.value) return
+  if (rankingChart) rankingChart.dispose()
+
+  rankingChart = echarts.init(rankingChartRef.value)
+  const colors = getThemeColors()
+
+  const sorted = [...models.value].sort((a, b) => b.elo - a.elo)
+  const names = sorted.map(m => m.name)
+  const elos = sorted.map(m => m.elo)
+  const barColors = sorted.map(m => m.color)
+
+  rankingChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: colors.paper,
+      borderColor: colors.line,
+      textStyle: { color: colors.text, fontSize: 13 },
+      formatter: (params) => {
+        const m = sorted[params[0].dataIndex]
+        return `<div style="font-weight:600;margin-bottom:4px">${m.name}</div>
+                <div style="color:${colors.textSecondary};font-size:12px">${m.org}</div>
+                <div style="margin-top:6px">ELO: <strong style="color:${m.color}">${m.elo}</strong></div>
+                <div style="font-size:12px;color:${colors.textTertiary}">投票数: ${m.votes.toLocaleString()}</div>`
+      }
+    },
+    grid: { left: 130, right: 50, top: 10, bottom: 20 },
+    xAxis: {
+      type: 'value',
+      min: Math.min(...elos) - 20,
+      max: Math.max(...elos) + 10,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: colors.line, type: 'dashed' } },
+      axisLabel: { color: colors.textTertiary, fontSize: 12 }
+    },
+    yAxis: {
+      type: 'category',
+      data: names,
+      inverse: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: colors.text, fontSize: 13, fontWeight: 500 }
+    },
+    series: [{
+      type: 'bar',
+      data: elos.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: barColors[i] + 'cc' },
+            { offset: 1, color: barColors[i] }
+          ]),
+          borderRadius: [0, 6, 6, 0]
+        }
+      })),
+      barWidth: 22,
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}',
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: 600,
+        fontFamily: 'var(--font-mono, monospace)'
+      }
+    }]
+  })
+}
+
+// 初始化趋势折线图
+function initTrendChart() {
+  if (!trendChartRef.value) return
+  if (trendChart) trendChart.dispose()
+
+  trendChart = echarts.init(trendChartRef.value)
+  const colors = getThemeColors()
+
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - 29 + i)
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  })
+
+  trendChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: colors.paper,
+      borderColor: colors.line,
+      textStyle: { color: colors.text, fontSize: 13 },
+      axisPointer: { lineStyle: { color: colors.line } }
+    },
+    legend: {
+      data: trendModels.value.map(m => m.name),
+      bottom: 0,
+      textStyle: { color: colors.textSecondary, fontSize: 12 },
+      icon: 'roundRect',
+      itemWidth: 16,
+      itemHeight: 3
+    },
+    grid: { left: 50, right: 20, top: 20, bottom: 50 },
+    xAxis: {
+      type: 'category',
+      data: days,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: colors.line } },
+      axisTick: { show: false },
+      axisLabel: { color: colors.textTertiary, fontSize: 11, interval: 4 }
+    },
+    yAxis: {
+      type: 'value',
+      min: 1260,
+      max: 1360,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: colors.line, type: 'dashed' } },
+      axisLabel: { color: colors.textTertiary, fontSize: 12 }
+    },
+    series: trendModels.value.map(m => ({
+      name: m.name,
+      type: 'line',
+      data: m.data,
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { width: 2.5, color: m.color },
+      itemStyle: { color: m.color },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: m.color + '20' },
+          { offset: 1, color: m.color + '05' }
+        ])
+      }
+    }))
+  })
+}
+
+// 窗口 resize 处理
+function handleResize() {
+  rankingChart?.resize()
+  trendChart?.resize()
+}
+
+// 切换 tab 时渲染对应图表
+watch(activeTab, async (tab) => {
+  await nextTick()
+  if (tab === 'ranking') {
+    initRankingChart()
+  } else if (tab === 'trend') {
+    initTrendChart()
+  }
+})
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize)
+
+  // 加载 AI 解读
   try {
     const res = await getContentByType('arena')
     arenaContents.value = res.data?.data?.list || res.data?.list || res.data || []
@@ -47,57 +232,17 @@ onMounted(async () => {
   } finally {
     arenaLoading.value = false
   }
+
+  // 延迟初始化图表
+  await nextTick()
+  initRankingChart()
 })
 
-// 30 天趋势数据（简化为关键时间点）
-const trendData = computed(() => {
-  const days = 30
-  const data = {
-    'Gemini 2.5 Pro': { start: 1320, end: 1342, color: '#4285F4' },
-    'GPT-4o': { start: 1340, end: 1338, color: '#10A37F' },
-    'Claude 3.5 Sonnet': { start: 1338, end: 1335, color: '#D97706' },
-    'DeepSeek-V3': { start: 1280, end: 1310, color: '#7C3AED' },
-    'Llama 3.1': { start: 1300, end: 1298, color: '#0EA5E9' }
-  }
-  return { days, data }
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  rankingChart?.dispose()
+  trendChart?.dispose()
 })
-
-// 计算柱状图高度比例
-const maxElo = computed(() => Math.max(...models.value.map(m => m.elo)))
-const minElo = computed(() => Math.min(...models.value.map(m => m.elo)))
-
-function getBarHeight(elo) {
-  const range = maxElo.value - minElo.value
-  const minH = 60
-  const maxH = 280
-  if (range === 0) return maxH
-  return minH + ((elo - minElo.value) / range) * (maxH - minH)
-}
-
-// 生成 SVG 趋势线路径
-function generateTrendPath(config, index) {
-  const { days, data } = trendData.value
-  const entries = Object.entries(data)
-  const modelName = entries[index]?.[0]
-  if (!modelName) return ''
-  
-  const { start, end } = data[modelName]
-  const w = 800
-  const h = 240
-  const padding = 40
-  
-  const points = []
-  for (let i = 0; i <= days; i++) {
-    const x = padding + (i / days) * (w - padding * 2)
-    const progress = i / days
-    const noise = Math.sin(i * 0.5) * 3 + Math.cos(i * 0.3) * 2
-    const y = h - padding - ((start + (end - start) * progress + noise - 1240) / 110) * (h - padding * 2)
-    points.push(`${x},${y}`)
-  }
-  return points.join(' ')
-}
-
-
 
 function renderMarkdown(text) {
   return text
@@ -111,7 +256,7 @@ function renderMarkdown(text) {
 <template>
   <div class="arena-view">
     <PortalTopbar />
-    
+
     <main class="arena-main">
       <!-- 页面头部 -->
       <header class="page-header">
@@ -119,246 +264,164 @@ function renderMarkdown(text) {
           <div class="header-left">
             <div class="header-icon">🏆</div>
             <div>
-              <h1>模型评测追踪</h1>
-              <p class="header-subtitle">实时追踪全球主流 AI 模型的竞技场排名与性能变化</p>
+              <h1>模型评测</h1>
+              <p class="header-subtitle">实时追踪全球主流 AI 模型的竞技场 ELO 评分排名与性能变化趋势</p>
             </div>
           </div>
           <div class="header-stats">
             <div class="stat-item">
-              <span class="stat-num">3</span>
-              <span class="stat-label">数据源</span>
+              <span class="stat-num">15</span>
+              <span class="stat-label">参评模型</span>
             </div>
             <div class="stat-item">
               <span class="stat-num">每日</span>
               <span class="stat-label">更新频率</span>
             </div>
             <div class="stat-item">
-              <span class="stat-num">{{ aiSummary.date }}</span>
+              <span class="stat-num">{{ today }}</span>
               <span class="stat-label">最后更新</span>
             </div>
           </div>
         </div>
       </header>
-      
-      <!-- 数据源 Tab -->
-      <div class="source-tabs">
+
+      <!-- 分类标签 -->
+      <div class="category-chips">
         <button
-          v-for="src in sources"
-          :key="src.id"
-          class="source-tab"
-          :class="{ active: activeSource === src.id }"
-          @click="activeSource = src.id"
+          v-for="cat in categories"
+          :key="cat"
+          class="category-chip"
+          :class="{ active: activeCategory === cat }"
+          @click="activeCategory = cat"
         >
-          <span class="tab-name">{{ src.name }}</span>
-          <span class="tab-badge" :class="{ 'badge-update': src.badge === '每日更新', 'badge-coming': src.badge === '即将接入' }">
-            {{ src.badge }}
-          </span>
+          {{ cat }}
         </button>
       </div>
-      
-      <!-- Chatbot Arena 内容 -->
-      <template v-if="activeSource === 'arena'">
-        <!-- AI 速报 -->
-        <section class="ai-summary">
-          <div class="ai-badge">✦ AI 解读</div>
-          <div class="ai-content">
-            <h3>Arena 速报 · {{ aiSummary.date }}</h3>
-            <ul v-if="arenaContents.length > 0">
-              <li v-for="(item, i) in arenaContents.slice(0, 3)" :key="item.id || i">
-                <span class="highlight-dot"></span>
-                {{ item.title || item.summary?.slice(0, 60) || 'Arena 分析报告' }}
-              </li>
-            </ul>
-            <p v-else-if="arenaLoading" style="color:#78350F;font-size:14px;">加载中...</p>
-            <p v-else style="color:#78350F;font-size:14px;">暂无Arena分析数据，请在后台数据采集页面触发采集</p>
-          </div>
-        </section>
-        
-        <!-- 分类标签 -->
-        <div class="category-chips">
-          <button
-            v-for="cat in categories"
-            :key="cat"
-            class="category-chip"
-            :class="{ active: activeCategory === cat }"
-            @click="activeCategory = cat"
-          >
-            {{ cat }}
-          </button>
-        </div>
-        
-        <!-- ELO 排名柱状图 -->
-        <section class="chart-card">
-          <div class="card-head">
-            <div>
-              <h3>ELO 评分排名</h3>
-              <span class="card-tag">Chatbot Arena · {{ activeCategory }}</span>
-            </div>
-            <span class="card-date">{{ aiSummary.date }} 更新</span>
-          </div>
-          <div class="card-body">
-            <div class="bar-chart">
-              <div v-for="model in models" :key="model.rank" class="bar-item">
-                <div class="bar-elo">{{ model.elo }}</div>
-                <div
-                  class="bar"
-                  :style="{
-                    height: getBarHeight(model.elo) + 'px',
-                    background: `linear-gradient(180deg, ${model.color}, ${model.color}88)`
-                  }"
-                >
-                  <div class="bar-rank">#{{ model.rank }}</div>
-                </div>
-                <div class="bar-name">{{ model.name }}</div>
-              </div>
-            </div>
-            
-            <!-- 排名表格 -->
-            <div class="ranking-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>排名</th>
-                    <th>模型</th>
-                    <th>机构</th>
-                    <th>ELO 评分</th>
-                    <th>变化</th>
-                    <th>投票数</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="model in models" :key="model.rank">
-                    <td>
-                      <span class="rank-badge" :class="{ gold: model.rank === 1, silver: model.rank === 2, bronze: model.rank === 3 }">
-                        {{ model.rank }}
-                      </span>
-                    </td>
-                    <td class="model-name">
-                      <span class="model-dot" :style="{ background: model.color }"></span>
-                      {{ model.name }}
-                    </td>
-                    <td class="org-name">{{ model.org }}</td>
-                    <td class="elo-score">{{ model.elo }}</td>
-                    <td>
-                      <span v-if="model.change > 0" class="change up">↑{{ model.change }}</span>
-                      <span v-else-if="model.change < 0" class="change down">↓{{ Math.abs(model.change) }}</span>
-                      <span v-else class="change same">-</span>
-                    </td>
-                    <td class="votes">{{ model.votes.toLocaleString() }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-        
-        <!-- 30 天趋势图 -->
-        <section class="chart-card">
-          <div class="card-head">
-            <div>
-              <h3>30 天 ELO 趋势</h3>
-              <span class="card-tag">TOP 5 模型走势</span>
-            </div>
-            <div class="legend">
-              <span v-for="(config, name) in trendData.data" :key="name" class="legend-item">
-                <span class="legend-dot" :style="{ background: config.color }"></span>
-                {{ name }}
-              </span>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="trend-chart">
-              <svg viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet">
-                <!-- 网格线 -->
-                <line v-for="i in 5" :key="'grid-'+i" :x1="40" :y1="40 + i * 36" :x2="760" :y2="40 + i * 36" stroke="var(--line)" stroke-dasharray="4 4" />
-                
-                <!-- Y 轴标签 -->
-                <text v-for="i in 6" :key="'label-'+i" x="35" :y="44 + (i-1) * 36" text-anchor="end" fill="var(--text-tertiary)" font-size="11">
-                  {{ 1350 - (i-1) * 10 }}
-                </text>
-                
-                <!-- 趋势线 -->
-                <g v-for="(config, name, index) in trendData.data" :key="name">
-                  <polyline
-                    :points="generateTrendPath(config, index)"
-                    fill="none"
-                    :stroke="config.color"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <!-- 末端标签 -->
-                  <circle
-                    :cx="760"
-                    :cy="200 - ((config.end - 1240) / 110) * 160"
-                    r="4"
-                    :fill="config.color"
-                  />
-                  <text
-                    x="768"
-                    :y="204 - ((config.end - 1240) / 110) * 160"
-                    :fill="config.color"
-                    font-size="11"
-                    font-weight="600"
-                  >
-                    {{ config.end }}
-                  </text>
-                </g>
-              </svg>
-            </div>
-          </div>
-        </section>
 
-        <!-- AI 解读 -->
-        <section class="chart-card ai-analysis-section">
-          <div class="card-head">
-            <div>
-              <h3>🤖 AI 解读</h3>
-              <span class="card-tag">基于Arena排行榜数据的智能分析</span>
+      <!-- 主体布局：侧边栏 + 图表区 -->
+      <div class="content-layout">
+        <!-- 左侧边栏 -->
+        <aside class="sidebar">
+          <nav class="sidebar-nav">
+            <button
+              class="sidebar-btn"
+              :class="{ active: activeTab === 'ranking' }"
+              @click="activeTab = 'ranking'"
+            >
+              <span class="sidebar-icon">📊</span>
+              <span class="sidebar-label">ELO 评分排名</span>
+            </button>
+            <button
+              class="sidebar-btn"
+              :class="{ active: activeTab === 'trend' }"
+              @click="activeTab = 'trend'"
+            >
+              <span class="sidebar-icon">📈</span>
+              <span class="sidebar-label">30天 ELO 趋势</span>
+            </button>
+          </nav>
+        </aside>
+
+        <!-- 右侧图表区 -->
+        <div class="chart-area">
+          <!-- ELO 评分排名 -->
+          <section v-if="activeTab === 'ranking'" class="chart-card">
+            <div class="card-head">
+              <div>
+                <h3>ELO 评分排名 · TOP 15</h3>
+                <span class="card-tag">Chatbot Arena · {{ activeCategory }}</span>
+              </div>
+              <span class="card-date">{{ today }} 更新</span>
             </div>
-          </div>
-          <div class="card-body">
-            <div v-if="arenaLoading" class="arena-empty-state">
-              <p>正在加载AI解读数据...</p>
-            </div>
-            <div v-else-if="arenaContents.length === 0" class="arena-empty-state">
-              <p>暂无Arena分析数据，请在后台数据采集页面触发采集</p>
-            </div>
-            <div v-else>
-              <div v-for="item in arenaContents" :key="item.id || item._id" class="arena-content-item">
-                <div class="arena-content-header">
-                  <h4>{{ item.title || 'Arena 分析报告' }}</h4>
-                  <span class="arena-content-date">{{ (item.createdAt || item.publishDate || '').slice(0, 10) }}</span>
-                </div>
-                <div class="ai-analysis-content" v-html="renderMarkdown(item.summary || item.content || '')"></div>
+            <div class="card-body">
+              <div ref="rankingChartRef" class="echart-container" style="height: 520px;"></div>
+
+              <!-- 排名表格 -->
+              <div class="ranking-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>排名</th>
+                      <th>模型</th>
+                      <th>机构</th>
+                      <th>ELO 评分</th>
+                      <th>变化</th>
+                      <th>投票数</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="model in models" :key="model.rank">
+                      <td>
+                        <span class="rank-badge" :class="{ gold: model.rank === 1, silver: model.rank === 2, bronze: model.rank === 3 }">
+                          {{ model.rank }}
+                        </span>
+                      </td>
+                      <td class="model-name">
+                        <span class="model-dot" :style="{ background: model.color }"></span>
+                        {{ model.name }}
+                      </td>
+                      <td class="org-name">{{ model.org }}</td>
+                      <td class="elo-score">{{ model.elo }}</td>
+                      <td>
+                        <span v-if="model.change > 0" class="change up">↑{{ model.change }}</span>
+                        <span v-else-if="model.change < 0" class="change down">↓{{ Math.abs(model.change) }}</span>
+                        <span v-else class="change same">-</span>
+                      </td>
+                      <td class="votes">{{ model.votes.toLocaleString() }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
+          </section>
+
+          <!-- 30天 ELO 趋势 -->
+          <section v-if="activeTab === 'trend'" class="chart-card">
+            <div class="card-head">
+              <div>
+                <h3>30 天 ELO 趋势</h3>
+                <span class="card-tag">TOP 5 模型走势</span>
+              </div>
+              <div class="legend">
+                <span v-for="m in trendModels" :key="m.name" class="legend-item">
+                  <span class="legend-dot" :style="{ background: m.color }"></span>
+                  {{ m.name }}
+                </span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div ref="trendChartRef" class="echart-container" style="height: 420px;"></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- AI 解读 -->
+      <section class="chart-card ai-analysis-section">
+        <div class="card-head">
+          <div>
+            <h3>🤖 AI 解读</h3>
+            <span class="card-tag">基于 Arena 排行榜数据的智能分析</span>
           </div>
-        </section>
-      </template>
-      
-      <!-- 其他数据源占位 -->
-      <template v-if="activeSource !== 'arena'">
-        <div class="coming-soon">
-          <div class="coming-icon">🚧</div>
-          <h3>{{ sources.find(s => s.id === activeSource)?.name }}</h3>
-          <p>暂无数据</p>
-          <div class="coming-features">
-            <div class="feature-item">
-              <span class="feature-icon">📊</span>
-              <span>全面的评测维度</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">🔄</span>
-              <span>实时数据同步</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">📈</span>
-              <span>趋势分析报告</span>
+        </div>
+        <div class="card-body">
+          <div v-if="arenaLoading" class="arena-empty-state">
+            <p>正在加载 AI 解读数据...</p>
+          </div>
+          <div v-else-if="arenaContents.length === 0" class="arena-empty-state">
+            <p>暂无 Arena 分析数据，请在后台数据采集页面触发采集</p>
+          </div>
+          <div v-else>
+            <div v-for="item in arenaContents" :key="item.id || item._id" class="arena-content-item">
+              <div class="arena-content-header">
+                <h4>{{ item.title || 'Arena 分析报告' }}</h4>
+                <span class="arena-content-date">{{ (item.createdAt || item.publishDate || '').slice(0, 10) }}</span>
+              </div>
+              <div class="ai-analysis-content" v-html="renderMarkdown(item.summary || item.content || '')"></div>
             </div>
           </div>
         </div>
-      </template>
+      </section>
     </main>
   </div>
 </template>
@@ -413,7 +476,7 @@ function renderMarkdown(text) {
   font-size: 15px;
   color: var(--text-secondary);
   margin: 0;
-  max-width: 400px;
+  max-width: 420px;
 }
 
 .header-stats {
@@ -438,116 +501,6 @@ function renderMarkdown(text) {
 .stat-label {
   font-size: 12px;
   color: var(--text-tertiary);
-}
-
-/* 数据源 Tab */
-.source-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 0;
-}
-
-.source-tab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-}
-
-.source-tab:hover {
-  color: var(--text-main);
-}
-
-.source-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-
-.tab-name {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.tab-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.badge-update {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-}
-
-.badge-coming {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-/* AI 解读 */
-.ai-summary {
-  display: flex;
-  gap: 16px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #FEF3C7, #FDE68A33);
-  border: 1px solid #FDE68A;
-  border-radius: var(--radius);
-  margin-bottom: 20px;
-}
-
-.ai-badge {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  background: linear-gradient(135deg, #F59E0B, #D97706);
-  color: #fff;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  height: fit-content;
-}
-
-.ai-content h3 {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0 0 12px;
-  color: #92400E;
-}
-
-.ai-content ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ai-content li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-  color: #78350F;
-  line-height: 1.6;
-}
-
-.highlight-dot {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #F59E0B;
-  margin-top: 8px;
 }
 
 /* 分类标签 */
@@ -578,6 +531,70 @@ function renderMarkdown(text) {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+/* 主体布局 */
+.content-layout {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  top: 80px;
+}
+
+.sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.sidebar-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sidebar-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.sidebar-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 图表区 */
+.chart-area {
+  flex: 1;
+  min-width: 0;
 }
 
 /* 图表卡片 */
@@ -618,69 +635,35 @@ function renderMarkdown(text) {
   padding: 24px;
 }
 
-/* 柱状图 */
-.bar-chart {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  height: 340px;
-  padding: 20px 0;
-  margin-bottom: 32px;
-}
-
-.bar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.bar-elo {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-}
-
-.bar {
+.echart-container {
   width: 100%;
-  min-height: 40px;
-  border-radius: 8px 8px 4px 4px;
-  position: relative;
+}
+
+/* 图例 */
+.legend {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 12px;
-  transition: all 0.3s ease;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.bar:hover {
-  opacity: 0.9;
-  transform: scaleX(1.05);
-}
-
-.bar-rank {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.bar-name {
-  font-size: 11px;
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: var(--text-secondary);
-  text-align: center;
-  writing-mode: horizontal-tb;
-  max-width: 80px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
 }
 
 /* 排名表格 */
 .ranking-table {
   overflow-x: auto;
+  margin-top: 24px;
 }
 
 table {
@@ -787,87 +770,6 @@ tr:hover td {
   color: var(--text-secondary);
 }
 
-/* 趋势图 */
-.legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.legend-dot {
-  width: 10px;
-  height: 3px;
-  border-radius: 2px;
-}
-
-.trend-chart {
-  width: 100%;
-  overflow: hidden;
-}
-
-.trend-chart svg {
-  width: 100%;
-  height: auto;
-}
-
-/* 占位卡片 */
-.coming-soon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 40px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  text-align: center;
-}
-
-.coming-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-}
-
-.coming-soon h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.coming-soon p {
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin: 0 0 32px;
-}
-
-.coming-features {
-  display: flex;
-  gap: 24px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--canvas);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.feature-icon {
-  font-size: 20px;
-}
-
 /* AI 解读分析卡片 */
 .ai-analysis-section .card-head {
   background: linear-gradient(135deg, #1a1a2e, #16213e);
@@ -944,114 +846,66 @@ tr:hover td {
   .arena-main {
     padding: 16px 12px 40px;
   }
-  
+
   .page-header {
     padding: 20px;
   }
-  
+
   .header-content {
     flex-direction: column;
     gap: 20px;
   }
-  
+
   .header-left {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .header-icon {
     font-size: 36px;
   }
-  
+
   .header-left h1 {
     font-size: 22px;
   }
-  
+
   .header-stats {
     width: 100%;
     justify-content: space-around;
   }
-  
-  .source-tabs {
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .source-tabs::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .source-tab {
-    flex-shrink: 0;
-    padding: 10px 16px;
-  }
-  
-  .ai-summary {
+
+  .content-layout {
     flex-direction: column;
-    gap: 12px;
   }
-  
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    position: static;
+  }
+
+  .sidebar-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
   .category-chips {
     overflow-x: auto;
     flex-wrap: nowrap;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding-bottom: 4px;
   }
-  
+
   .category-chips::-webkit-scrollbar {
     display: none;
   }
-  
+
   .category-chip {
     flex-shrink: 0;
-  }
-  
-  .card-head {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .bar-chart {
-    height: 260px;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-  }
-  
-  .bar-item {
-    min-width: 60px;
-  }
-  
-  .bar-name {
-    font-size: 10px;
-    max-width: 60px;
-  }
-  
-  .ranking-table {
-    margin: 0 -12px;
-    padding: 0 12px;
-  }
-  
-  th, td {
-    padding: 10px 12px;
-  }
-  
-  .legend {
-    gap: 10px;
-  }
-  
-  .coming-features {
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-  }
-  
-  .feature-item {
-    justify-content: center;
   }
 }
 </style>

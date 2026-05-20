@@ -26,7 +26,7 @@ const totalPapers = ref(0)
 async function fetchPapers() {
   loading.value = true
   try {
-    const res = await getPapers({ pageNum: 1, pageSize: 200 })
+    const res = await getPapers({ pageNum: 1, pageSize: 100 })
     allPapers.value = (res.data?.records || []).map((r, i) => ({
       id: r.id,
       rank: i + 1,
@@ -63,14 +63,15 @@ const reverseLabelMap = computed(() => {
 
 const { activeTab, setTab } = useTabs('')
 
-// 数据加载后自动选中第一个Tab
-watch(tabs, (newTabs) => {
-  if (newTabs.length && !newTabs.includes(activeTab.value)) {
-    setTab(newTabs[0])
+onMounted(async () => {
+  await fetchPapers()
+  // Auto-select first tab after data loads
+  const subCats = [...new Set(allPapers.value.map(p => p.subCategory).filter(Boolean))]
+  if (subCats.length) {
+    const firstLabel = subCategoryLabels[subCats[0]] || subCats[0]
+    setTab(firstLabel)
   }
-}, { immediate: true })
-
-onMounted(fetchPapers)
+})
 
 // AI摘要信息（基于真实数据）
 const summaryInfo = computed(() => ({
