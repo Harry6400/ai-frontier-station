@@ -17,6 +17,8 @@ public class ContentSaveRequest {
     @NotBlank(message = "内容类型不能为空")
     private String contentType;
 
+    private String subCategory;
+
     private String summary;
 
     private String coverImage;

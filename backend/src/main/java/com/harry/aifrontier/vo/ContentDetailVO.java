@@ -16,6 +16,8 @@ public class ContentDetailVO {
 
     private String contentType;
 
+    private String subCategory;
+
     private String summary;
 
     private String coverImage;

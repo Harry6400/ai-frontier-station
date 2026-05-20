@@ -200,6 +200,7 @@ const form = reactive({
   title: '',
   slug: '',
   contentType: 'news',
+  subCategory: '',
   summary: '',
   coverImage: '',
   categoryId: null,
@@ -208,10 +209,11 @@ const form = reactive({
   authorName: 'Harry',
   publishStatus: 'PUBLISHED',
   featuredLevel: 0,
-  readingTime: 5,
   publishedAt: '',
   bodyMarkdown: '',
-  extraJson: ''
+  extraJson: '',
+  paperOriginalUrl: '',
+  paperCodeUrl: ''
 })
 const externalRefs = ref([])
 const externalRefDialogVisible = ref(false)
@@ -577,6 +579,7 @@ function resetForm() {
   form.title = ''
   form.slug = ''
   form.contentType = contentOptions.value.contentTypes[0]?.value || 'news'
+  form.subCategory = ''
   form.summary = ''
   form.coverImage = ''
   form.categoryId = contentOptions.value.categories[0]?.id || null
@@ -585,10 +588,11 @@ function resetForm() {
   form.authorName = ''
   form.publishStatus = 'PUBLISHED'
   form.featuredLevel = 0
-  form.readingTime = 5
   form.publishedAt = ''
   form.bodyMarkdown = ''
   form.extraJson = ''
+  form.paperOriginalUrl = ''
+  form.paperCodeUrl = ''
 }
 
 function resetExternalRefForm() {
@@ -796,7 +800,6 @@ function fillContentFormFromAiSource() {
   form.authorName = aiSourceForm.provider === 'mimo' ? 'MiMo辅助整理' : '百炼辅助整理'
   form.publishStatus = 'PUBLISHED'
   form.featuredLevel = payload.importanceScore >= 85 ? 3 : payload.importanceScore >= 70 ? 2 : 1
-  form.readingTime = aiSourceGenerated.value.readingTime || 6
   form.bodyMarkdown = payload.bodyMarkdown
   form.extraJson = aiSourceGenerated.value.extraJson || ''
   previewMode.value = 'detail'
@@ -972,6 +975,7 @@ async function openEdit(row) {
     form.title = detail.title
     form.slug = detail.slug
     form.contentType = detail.contentType
+    form.subCategory = detail.subCategory || ''
     form.summary = detail.summary || ''
     form.coverImage = detail.coverImage || ''
     form.categoryId = detail.categoryId
@@ -980,10 +984,22 @@ async function openEdit(row) {
     form.authorName = detail.authorName || ''
     form.publishStatus = detail.publishStatus
     form.featuredLevel = detail.featuredLevel ?? 0
-    form.readingTime = detail.readingTime ?? 5
     form.publishedAt = detail.publishedAt ? detail.publishedAt.replace(' ', 'T') : detail.publishedAt
     form.bodyMarkdown = detail.bodyMarkdown || ''
     form.extraJson = detail.extraJson || ''
+    // Parse paper URLs from sourceUrl or extraJson
+    form.paperOriginalUrl = ''
+    form.paperCodeUrl = ''
+    if (detail.extraJson) {
+      try {
+        const extra = JSON.parse(detail.extraJson)
+        form.paperOriginalUrl = extra.paperOriginalUrl || ''
+        form.paperCodeUrl = extra.paperCodeUrl || ''
+      } catch (e) { /* ignore */ }
+    }
+    if (!form.paperOriginalUrl && detail.sourceUrl) {
+      form.paperOriginalUrl = detail.sourceUrl
+    }
     externalRefs.value = detail.externalRefs || []
     previewMode.value = 'detail'
     editorTab.value = 'basic'
@@ -997,10 +1013,23 @@ async function openEdit(row) {
 async function submit() {
   await contentFormDialogRef.value.formRef.validate()
   try {
+    // For papers, merge paper URLs into sourceUrl and extraJson
     const payload = {
       ...form,
       publishedAt: form.publishedAt || null
     }
+    if (form.contentType === 'paper') {
+      payload.sourceUrl = form.paperOriginalUrl || form.sourceUrl
+      let extra = {}
+      if (form.extraJson) {
+        try { extra = JSON.parse(form.extraJson) } catch (e) { /* ignore */ }
+      }
+      if (form.paperOriginalUrl) extra.paperOriginalUrl = form.paperOriginalUrl
+      if (form.paperCodeUrl) extra.paperCodeUrl = form.paperCodeUrl
+      payload.extraJson = JSON.stringify(extra)
+    }
+    delete payload.paperOriginalUrl
+    delete payload.paperCodeUrl
     if (editingId.value) {
       await updateContent(editingId.value, payload)
       ElMessage.success('内容更新成功')
@@ -1225,203 +1254,18 @@ onMounted(initialize)
       @update:keyword="(value) => { filters.keyword = value }"
     />
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingId ? '编辑内容' : '新建内容'"
-      width="min(90vw, 1100px)"
-      class="content-dialog"
-      @closed="handleDialogClosed"
-    >
-      <div class="editor-tabs-layout">
-        <aside class="editor-tabs-side">
-          <h3>{{ editingId ? '编辑' : '新建' }}</h3>
-          <nav class="editor-tabs-nav">
-            <a :class="{ 'is-active': editorTab === 'basic' }" @click="editorTab = 'basic'">基本信息</a>
-            <a :class="{ 'is-active': editorTab === 'body' }" @click="editorTab = 'body'">正文内容</a>
-            <a :class="{ 'is-active': editorTab === 'refs' }" @click="editorTab = 'refs'">外部引用</a>
-          </nav>
-        </aside>
-        <div class="editor-tabs-main">
-
-          <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-            <div v-show="editorTab === 'basic'">
-              <div class="form-grid">
-                <el-form-item label="标题" prop="title">
-                  <el-input v-model="form.title" />
-                </el-form-item>
-                <el-form-item label="内容标识">
-                  <el-input v-model="form.slug" placeholder="可选，不填自动生成" />
-                </el-form-item>
-                <el-form-item label="内容类型" prop="contentType">
-                  <el-select v-model="form.contentType">
-                    <el-option
-                      v-for="item in contentOptions.contentTypes"
-                      :key="item.value"
-                      :label="item.label"
-                      :value="item.value"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="分类" prop="categoryId">
-                  <el-select v-model="form.categoryId">
-                    <el-option
-                      v-for="item in contentOptions.categories"
-                      :key="item.id"
-                      :label="item.name"
-                      :value="item.id"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="来源">
-                  <el-select v-model="form.sourceId" clearable>
-                    <el-option
-                      v-for="item in contentOptions.sources"
-                      :key="item.id"
-                      :label="item.name"
-                      :value="item.id"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="原始链接" prop="sourceUrl">
-                  <el-input v-model="form.sourceUrl" />
-                </el-form-item>
-                <el-form-item label="作者">
-                  <el-input v-model="form.authorName" />
-                </el-form-item>
-                <el-form-item label="精选级别">
-                  <el-input-number v-model="form.featuredLevel" :min="0" :max="5" />
-                </el-form-item>
-                <el-form-item label="发布时间">
-                  <el-date-picker
-                    v-model="form.publishedAt"
-                    type="datetime"
-                    value-format="YYYY-MM-DDTHH:mm:ss"
-                    placeholder="可选"
-                  />
-                </el-form-item>
-              </div>
-
-              <el-form-item label="摘要" prop="summary">
-                <el-input v-model="form.summary" type="textarea" :rows="3" />
-              </el-form-item>
-            </div>
-
-            <div v-show="editorTab === 'body'">
-              <el-form-item label="正文" prop="bodyMarkdown">
-                <el-input v-model="form.bodyMarkdown" type="textarea" :rows="18" />
-              </el-form-item>
-              <div style="margin-top: -8px; margin-bottom: 16px; padding: 12px 16px; background: #f4f4f5; border-radius: 6px; font-size: 12px; color: #909399; line-height: 1.6;">
-                <div style="font-weight: 600; color: #606266; margin-bottom: 6px;">📋 AI 输出模板（推荐格式）</div>
-                <pre style="margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px;">## 核心贡献
-一句话说明论文/产品的核心贡献。
-
-## 方法简述
-简要描述使用的方法或技术路线。
-
-## 关键结果
-- 结果1
-- 结果2
-
-## 与CT去噪/医学影像的关联度
-评分(1-10) + 一句话说明。
-
-## 推荐理由
-为什么值得阅读/关注。</pre>
-              </div>
-            </div>
-          </el-form>
-
-          <div v-show="editorTab === 'refs'">
-            <div class="refs-tab-header">
-              <el-button size="small" type="primary" @click="openCreateExternalRef">
-                {{ editingId ? '新增外部引用' : '请先保存内容' }}
-              </el-button>
-            </div>
-            <div v-if="externalRefs.length" class="external-ref-preview-list">
-              <article
-                v-for="item in externalRefs"
-                :key="item.id"
-                class="external-ref-preview-card"
-              >
-                <span>{{ getExternalRefMeta(item.refType).label }}</span>
-                <strong>{{ item.externalId || '未设置外部 ID' }}</strong>
-                <p>{{ getExternalRefMeta(item.refType).note }}</p>
-                <em>{{ formatDateTime(item.syncedAt) }}</em>
-                <div class="external-ref-actions">
-                  <a
-                    v-if="item.externalUrl"
-                    :href="item.externalUrl"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    打开
-                  </a>
-                  <button type="button" @click="openEditExternalRef(item)">编辑</button>
-                  <button type="button" class="is-danger" @click="handleExternalRefDelete(item)">删除</button>
-                </div>
-              </article>
-            </div>
-            <p v-else class="preview-summary">
-              {{ editingId ? '当前内容还没有外部引用。后续可以在这里绑定 GitHub 仓库、arXiv 论文或官方公告。' : '请先保存内容，再维护外部引用。' }}
-            </p>
-          </div>
-
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">{{ submitButtonText }}</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
-      v-model="externalRefDialogVisible"
-      :title="editingExternalRefId ? '编辑外部引用' : '新增外部引用'"
-      width="680px"
-    >
-      <el-form ref="externalRefFormRef" :model="externalRefForm" :rules="externalRefRules" label-width="110px">
-        <el-form-item label="引用类型" prop="refType">
-          <el-select v-model="externalRefForm.refType">
-            <el-option
-              v-for="item in externalRefTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="外部ID">
-          <el-input v-model="externalRefForm.externalId" placeholder="例如：owner/repo 或 arxiv-demo-001" />
-        </el-form-item>
-        <el-form-item label="外部链接" prop="externalUrl">
-          <el-input v-model="externalRefForm.externalUrl" placeholder="https://example.com" />
-        </el-form-item>
-        <el-form-item label="同步时间">
-          <el-date-picker
-            v-model="externalRefForm.syncedAt"
-            type="datetime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-            placeholder="可选"
-          />
-        </el-form-item>
-        <el-form-item label="原始快照" prop="rawPayloadJson">
-          <el-input
-            v-model="externalRefForm.rawPayloadJson"
-            type="textarea"
-            :rows="5"
-            placeholder='例如：{"source":"manual","note":"demo"}'
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="externalRefDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitExternalRef">
-          {{ editingExternalRefId ? '保存修改' : '创建引用' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <ContentFormDialog
+      ref="contentFormDialogRef"
+      :visible="dialogVisible"
+      :editing-id="editingId"
+      :form="form"
+      :content-options="contentOptions"
+      :external-refs="externalRefs"
+      :rules="rules"
+      @update:visible="(val) => dialogVisible = val"
+      @save="submit"
+      @dialog-closed="handleDialogClosed"
+    />
 
     <el-dialog
       v-model="aiSourceDialogVisible"

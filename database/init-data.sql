@@ -36,6 +36,7 @@ INSERT INTO ai_tag (name, slug, color, description) VALUES
 INSERT INTO ai_source (name, slug, source_type, website_url, description, is_enabled) VALUES
 ('GitHub Trending', 'github-trending', 'github', 'https://github.com/trending', 'GitHub 热门仓库来源', 1),
 ('arXiv', 'arxiv', 'paper', 'https://arxiv.org', 'AI 科研论文来源', 1),
+('HuggingFace', 'huggingface', 'paper', 'https://huggingface.co', 'HuggingFace Papers 论文来源', 1),
 ('OpenAI Blog', 'openai-blog', 'official_blog', 'https://openai.com/news', 'OpenAI 官方动态来源', 1),
 ('DeepSeek News', 'deepseek-news', 'official_blog', 'https://www.deepseek.com', 'DeepSeek 官方动态来源', 1),
 ('人工录入', 'manual-entry', 'manual', NULL, '当前阶段的人工录入内容来源', 1);

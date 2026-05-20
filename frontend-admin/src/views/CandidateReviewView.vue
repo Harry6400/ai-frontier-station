@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index'
 import {
@@ -38,6 +38,31 @@ const expandedEventId = ref(null)
 const expandedEventDetail = ref(null)
 const eventDetailLoading = ref(false)
 const eventDetailTab = ref('body')
+const eventReviewTab = ref('all')
+
+const filteredEventList = computed(() => {
+  if (eventReviewTab.value === 'all') return eventList.value
+  return eventList.value.filter(ev => {
+    // Check tags array first
+    if (ev.tags && Array.isArray(ev.tags)) {
+      return ev.tags.some(t => {
+        const tag = (typeof t === 'string' ? t : t.name || t.label || '').toLowerCase()
+        if (eventReviewTab.value === 'news') return tag.includes('资讯') || tag.includes('news') || tag.includes('ai')
+        if (eventReviewTab.value === 'product') return tag.includes('产品') || tag.includes('product') || tag.includes('动态')
+        return false
+      })
+    }
+    // Fallback: check sourceType or eventType
+    const src = (ev.sourceType || ev.eventType || ev.type || '').toLowerCase()
+    if (eventReviewTab.value === 'news') return src.includes('news')
+    if (eventReviewTab.value === 'product') return src.includes('product')
+    // Fallback: check title for product patterns
+    const title = (ev.title || '').toLowerCase()
+    if (eventReviewTab.value === 'product') return title.includes('最新动态') || title.includes('发布') || title.includes('产品')
+    if (eventReviewTab.value === 'news') return !title.includes('最新动态')
+    return true
+  })
+})
 
 /* ── recent auto-published state ── */
 const recentList = ref([])
@@ -292,16 +317,35 @@ onMounted(() => {
         <el-button size="small" @click="loadEvents" :loading="eventLoading" plain>刷新</el-button>
       </div>
 
+      <!-- Event Review Tabs -->
+      <div class="event-review-tabs">
+        <button
+          class="event-review-tab"
+          :class="{ active: eventReviewTab === 'all' }"
+          @click="eventReviewTab = 'all'"
+        >全部</button>
+        <button
+          class="event-review-tab"
+          :class="{ active: eventReviewTab === 'news' }"
+          @click="eventReviewTab = 'news'"
+        >📰 AI资讯</button>
+        <button
+          class="event-review-tab"
+          :class="{ active: eventReviewTab === 'product' }"
+          @click="eventReviewTab = 'product'"
+        >📦 产品动态</button>
+      </div>
+
       <div v-if="eventLoading && eventList.length === 0" class="event-loading">
         <span class="event-loading-spinner"></span>
         加载中...
       </div>
-      <div v-else-if="eventList.length === 0" class="event-empty">
+      <div v-else-if="filteredEventList.length === 0" class="event-empty">
         <span class="event-empty-icon">📭</span>
-        暂无待审核事件
+        {{ eventReviewTab === 'all' ? '暂无待审核事件' : '该分类暂无事件' }}
       </div>
       <div v-else class="event-list">
-        <div v-for="event in eventList" :key="event.id" class="event-card-wrapper">
+        <div v-for="event in filteredEventList" :key="event.id" class="event-card-wrapper">
           <div
             class="event-card"
             :class="{ 'event-card--expanded': expandedEventId === event.id }"
@@ -404,8 +448,8 @@ onMounted(() => {
                       <div v-for="item in expandedEventDetail.contents" :key="item.id" class="source-item">
                         <div class="source-item-header">
                           <a
-                            v-if="item.url || item.originalUrl"
-                            :href="item.url || item.originalUrl"
+                            v-if="item.sourceUrl || item.url"
+                            :href="item.sourceUrl || item.url"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="source-item-title"
@@ -678,6 +722,36 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--admin-text, #1f2937);
+}
+
+.event-review-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--admin-border, #e5e7eb);
+  padding-bottom: 0;
+}
+
+.event-review-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--admin-text-secondary, #6b7280);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.event-review-tab:hover {
+  color: var(--admin-primary, #3b82f6);
+}
+
+.event-review-tab.active {
+  color: var(--admin-primary, #3b82f6);
+  border-bottom-color: var(--admin-primary, #3b82f6);
+  font-weight: 600;
 }
 
 .event-loading,

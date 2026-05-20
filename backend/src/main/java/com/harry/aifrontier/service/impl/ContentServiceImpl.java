@@ -420,6 +420,7 @@ public class ContentServiceImpl implements ContentService {
         content.setTitle(request.getTitle().trim());
         content.setSlug(SlugUtil.resolveSlug(request.getSlug(), request.getTitle(), "content"));
         content.setContentType(request.getContentType());
+        content.setSubCategory(request.getSubCategory());
         content.setSummary(request.getSummary());
         content.setCoverImage(request.getCoverImage());
         content.setCategoryId(request.getCategoryId());
