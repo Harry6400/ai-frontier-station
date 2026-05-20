@@ -19,7 +19,7 @@ const activeDirection = ref('全部')
 const activeSort = ref('趋势分')
 
 const directions = ['全部', 'LLM', 'Agent', 'Diffusion', 'CV', 'NLP', 'Infra', 'Tool']
-const sortOptions = ['趋势分', 'Star增长', '最近更新']
+const sortOptions = ['趋势分', 'Star增长']
 
 function parseTags(raw) {
   if (!raw) return []
@@ -63,11 +63,10 @@ const filteredRepos = computed(() => {
     list.sort((a, b) => b.trendScore - a.trendScore)
   } else if (activeSort.value === 'Star增长') {
     list.sort((a, b) => b.starGrowth7d - a.starGrowth7d)
-  } else if (activeSort.value === '最近更新') {
-    list.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
   }
 
-  return list
+  // Limit display to 20 items
+  return list.slice(0, 20)
 })
 
 function handlePageChange(p) { page.value = p; fetchData() }

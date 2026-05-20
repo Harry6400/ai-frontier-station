@@ -15,7 +15,7 @@ public class GitHubWeeklyScheduler {
     private final GitHubTrendingService gitHubTrendingService;
     private final AutoPublishService autoPublishService;
 
-    @Scheduled(cron = "0 0 9 * * MON")
+    @Scheduled(cron = "0 0 9 */3 * *")
     public void weeklyFetch() {
         log.info("[GitHub Weekly] 开始每周Top 10刷新");
         try {

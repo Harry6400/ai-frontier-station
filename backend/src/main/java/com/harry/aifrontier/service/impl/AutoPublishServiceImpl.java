@@ -325,7 +325,7 @@ public class AutoPublishServiceImpl implements AutoPublishService {
 
     private String mapCategorySlug(String sourceType) {
         switch (sourceType) {
-            case "github":  return "products";
+            case "github":  return "github";
             case "news":    return "news";
             case "product": return "products";
             case "arena":   return "arena";

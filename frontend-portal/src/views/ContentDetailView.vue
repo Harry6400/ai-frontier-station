@@ -31,6 +31,33 @@ const extraObject = computed(() => {
     return {}
   }
 })
+const contentType = computed(() => detail.value?.contentType || '')
+
+// GitHub/project type data from extraJson
+const githubMeta = computed(() => {
+  const o = extraObject.value
+  return {
+    stars: o.stars || o.starCount || 0,
+    forks: o.forks || o.forkCount || 0,
+    language: o.language || '',
+    topics: Array.isArray(o.topics) ? o.topics : [],
+    pushedAt: o.pushedAt || ''
+  }
+})
+
+// News type data from extraJson
+const newsMeta = computed(() => ({
+  aiDirection: extraObject.value.aiDirection || '',
+  category: extraObject.value.category || ''
+}))
+
+// Practice/tools type data from extraJson
+const practiceMeta = computed(() => ({
+  platform: extraObject.value.platform || '',
+  subreddit: extraObject.value.subreddit || '',
+  upvotes: extraObject.value.upvotes || 0
+}))
+
 const aiGuide = computed(() => ({
   aiSummary: extraObject.value.aiSummary,
   recommendationReason: extraObject.value.recommendationReason,
@@ -93,15 +120,91 @@ watch(() => route.params.id, (id) => loadDetail(id))
     <PortalTopbar context-label="Reading Mode" context-value="内容详情" />
 
     <main class="page-stack" v-if="detail">
+      <!-- ===== HERO: type-specific ===== -->
       <section class="detail-hero">
-        <article class="section-shell detail-hero-main">
+        <!-- Generic / Paper hero (default) -->
+        <article v-if="contentType === 'paper' || (!contentType)" class="section-shell detail-hero-main">
           <span class="eyebrow-line">
             {{ typeMeta.label }} · {{ detail.categoryName }}
             <span v-if="subCategoryLabel" class="sub-category-tag">{{ subCategoryLabel }}</span>
           </span>
           <h1>{{ detail.title }}</h1>
           <p class="lead-copy">{{ detail.summary }}</p>
+          <div class="detail-meta-grid">
+            <div class="detail-meta-cell">
+              <span>发布时间</span>
+              <strong>{{ formatDateTime(detail.publishedAt) }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>作者</span>
+              <strong>{{ detail.authorName || '未知' }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>来源</span>
+              <strong>{{ detail.sourceName || '人工录入' }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>浏览量</span>
+              <strong>{{ detail.viewCount }}</strong>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <RouterLink class="secondary-btn" :to="backPath">返回内容广场</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
+              查看原始链接
+            </a>
+          </div>
+        </article>
 
+        <!-- GitHub / Project hero -->
+        <article v-else-if="contentType === 'project'" class="section-shell detail-hero-main">
+          <span class="eyebrow-line">🔥 开源项目</span>
+          <h1>{{ detail.title }}</h1>
+          <p class="lead-copy">{{ detail.summary }}</p>
+
+          <div class="detail-meta-grid">
+            <div class="detail-meta-cell">
+              <span>⭐ Stars</span>
+              <strong>{{ githubMeta.stars?.toLocaleString() || '0' }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>🍴 Forks</span>
+              <strong>{{ githubMeta.forks?.toLocaleString() || '0' }}</strong>
+            </div>
+            <div v-if="detail.trendScore" class="detail-meta-cell">
+              <span>📊 趋势分</span>
+              <strong>{{ detail.trendScore }}</strong>
+            </div>
+            <div v-if="githubMeta.language" class="detail-meta-cell">
+              <span>💻 语言</span>
+              <strong>{{ githubMeta.language }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>来源</span>
+              <strong>{{ detail.authorName || detail.sourceName || 'GitHub' }}</strong>
+            </div>
+          </div>
+
+          <div v-if="githubMeta.topics.length" class="topic-tags">
+            <span v-for="tag in githubMeta.topics" :key="tag" class="topic-tag">{{ tag }}</span>
+          </div>
+
+          <div class="hero-actions">
+            <RouterLink class="secondary-btn" :to="backPath">返回趋势榜</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
+              🔗 查看 GitHub
+            </a>
+          </div>
+        </article>
+
+        <!-- News hero -->
+        <article v-else-if="contentType === 'news'" class="section-shell detail-hero-main">
+          <span class="eyebrow-line">
+            📰 AI 新闻
+            <span v-if="newsMeta.aiDirection" class="sub-category-tag news-tag">{{ newsMeta.aiDirection }}</span>
+          </span>
+          <h1>{{ detail.title }}</h1>
+          <p class="lead-copy">{{ detail.summary }}</p>
           <div class="detail-meta-grid">
             <div class="detail-meta-cell">
               <span>发布时间</span>
@@ -111,28 +214,99 @@ watch(() => route.params.id, (id) => loadDetail(id))
               <span>来源</span>
               <strong>{{ detail.sourceName || '人工录入' }}</strong>
             </div>
-
-            <div class="detail-meta-cell">
-              <span>浏览量</span>
-              <strong>{{ detail.viewCount }}</strong>
+            <div v-if="newsMeta.category" class="detail-meta-cell">
+              <span>分类</span>
+              <strong>{{ newsMeta.category }}</strong>
             </div>
           </div>
-
           <div class="hero-actions">
-            <RouterLink class="secondary-btn" :to="backPath">返回内容广场</RouterLink>
-            <a
-              v-if="detail.sourceUrl"
-              class="primary-btn"
-              :href="detail.sourceUrl"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <RouterLink class="secondary-btn" :to="backPath">返回新闻</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
+              查看原始来源
+            </a>
+          </div>
+        </article>
+
+        <!-- Company Update / Product hero -->
+        <article v-else-if="contentType === 'company_update'" class="section-shell detail-hero-main">
+          <span class="eyebrow-line">🏢 产品动态</span>
+          <h1>{{ detail.title }}</h1>
+          <p class="lead-copy">{{ detail.summary }}</p>
+          <div class="detail-meta-grid">
+            <div class="detail-meta-cell">
+              <span>发布时间</span>
+              <strong>{{ formatDateTime(detail.publishedAt) }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>公司/产品</span>
+              <strong>{{ detail.authorName || detail.sourceName || '未知' }}</strong>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <RouterLink class="secondary-btn" :to="backPath">返回产品动态</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
               查看原始链接
             </a>
           </div>
         </article>
 
+        <!-- Practice / Tools hero -->
+        <article v-else-if="contentType === 'practice'" class="section-shell detail-hero-main">
+          <span class="eyebrow-line">🛠️ 实战技巧</span>
+          <h1>{{ detail.title }}</h1>
+          <p class="lead-copy">{{ detail.summary }}</p>
+          <div class="detail-meta-grid">
+            <div class="detail-meta-cell">
+              <span>发布时间</span>
+              <strong>{{ formatDateTime(detail.publishedAt) }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>作者</span>
+              <strong>{{ detail.authorName || '未知' }}</strong>
+            </div>
+            <div v-if="practiceMeta.platform" class="detail-meta-cell">
+              <span>平台</span>
+              <strong>{{ practiceMeta.platform }}</strong>
+            </div>
+            <div v-if="practiceMeta.upvotes" class="detail-meta-cell">
+              <span>👍 点赞</span>
+              <strong>{{ practiceMeta.upvotes }}</strong>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <RouterLink class="secondary-btn" :to="backPath">返回技巧库</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
+              查看原始链接
+            </a>
+          </div>
+        </article>
 
+        <!-- Fallback generic hero -->
+        <article v-else class="section-shell detail-hero-main">
+          <span class="eyebrow-line">{{ typeMeta.label }} · {{ detail.categoryName }}</span>
+          <h1>{{ detail.title }}</h1>
+          <p class="lead-copy">{{ detail.summary }}</p>
+          <div class="detail-meta-grid">
+            <div class="detail-meta-cell">
+              <span>发布时间</span>
+              <strong>{{ formatDateTime(detail.publishedAt) }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>来源</span>
+              <strong>{{ detail.sourceName || '人工录入' }}</strong>
+            </div>
+            <div class="detail-meta-cell">
+              <span>浏览量</span>
+              <strong>{{ detail.viewCount }}</strong>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <RouterLink class="secondary-btn" :to="backPath">返回内容广场</RouterLink>
+            <a v-if="detail.sourceUrl" class="primary-btn" :href="detail.sourceUrl" target="_blank" rel="noreferrer">
+              查看原始链接
+            </a>
+          </div>
+        </article>
       </section>
 
       <section v-if="hasAiGuide" class="section-shell ai-guide-panel">
@@ -162,8 +336,16 @@ watch(() => route.params.id, (id) => loadDetail(id))
         <article class="section-shell article-shell">
           <div class="section-head section-head--tight">
             <div>
-              <span class="section-kicker">Original Reading</span>
-              <h2>正文与原文摘录</h2>
+              <span class="section-kicker" v-if="contentType === 'project'">AI Project Analysis</span>
+              <span class="section-kicker" v-else-if="contentType === 'news'">Event Report</span>
+              <span class="section-kicker" v-else-if="contentType === 'company_update'">Product Update</span>
+              <span class="section-kicker" v-else-if="contentType === 'practice'">Translated Content</span>
+              <span class="section-kicker" v-else>Original Reading</span>
+              <h2 v-if="contentType === 'project'">项目分析</h2>
+              <h2 v-else-if="contentType === 'news'">事件报道</h2>
+              <h2 v-else-if="contentType === 'company_update'">产品更新报告</h2>
+              <h2 v-else-if="contentType === 'practice'">翻译内容</h2>
+              <h2 v-else>正文与原文摘录</h2>
             </div>
           </div>
 
@@ -210,5 +392,30 @@ watch(() => route.params.id, (id) => loadDetail(id))
   border: 1px solid rgba(59, 130, 246, 0.25);
   border-radius: 999px;
   vertical-align: middle;
+}
+
+.news-tag {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  border-color: rgba(5, 150, 105, 0.25);
+}
+
+.topic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.topic-tag {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(0,0,0,0.1));
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text-secondary, #555);
+  background: var(--paper, #fff);
+  white-space: nowrap;
 }
 </style>

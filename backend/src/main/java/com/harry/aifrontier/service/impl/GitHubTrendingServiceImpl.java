@@ -71,7 +71,7 @@ public class GitHubTrendingServiceImpl implements GitHubTrendingService {
                             .queryParam("q", query)
                             .queryParam("sort", "stars")
                             .queryParam("order", "desc")
-                            .queryParam("per_page", 30)
+                            .queryParam("per_page", 20)
                             .build())
                     .retrieve()
                     .body(JsonNode.class);
@@ -155,14 +155,20 @@ public class GitHubTrendingServiceImpl implements GitHubTrendingService {
         // AI 相关性: 检查描述和主题
         double aiScore = calculateAiRelevance(repo);
 
+        // 提交频率估算: pushed_at - created_at 比率
+        double commitFreqScore = repoAgeDays > 0
+                ? Math.min((1.0 - (double) daysSincePush / repoAgeDays) * 100, 100)
+                : 100;
+
         // 时间衰减: 惩罚过于老旧的仓库
         double timeDecay = Math.max(0, 1.0 - repoAgeDays / 365.0 * 0.5);
 
-        // 最终分数 = (增长率*0.35 + 活跃度*0.15 + 社区参与*0.10 + AI相关*0.10) * 时间衰减
-        double score = (starGrowthScore * 0.35
-                + recencyScore * 0.15
-                + forkScore * 0.10
-                + aiScore * 0.10) * timeDecay;
+        // 最终分数 = (增长率*0.20 + 活跃度*0.20 + 社区参与*0.15 + 提交频率*0.15 + AI相关*0.15) * 时间衰减*0.15
+        double score = (starGrowthScore * 0.20
+                + recencyScore * 0.20
+                + forkScore * 0.15
+                + commitFreqScore * 0.15
+                + aiScore * 0.15) * timeDecay;
 
         return BigDecimal.valueOf(Math.round(score * 100) / 100.0);
     }
